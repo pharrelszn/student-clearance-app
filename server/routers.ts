@@ -1,13 +1,33 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
+import {
+  searchStudents,
+  getOrCreateClearance,
+  getClearanceWithDetails,
+  getClearanceStatusSummary,
+  getDb,
+  getUserById,
+} from "./db";
+import {
+  clearances,
+  departmentSignOffs,
+  financeChecks,
+  labChecks,
+  sportsChecks,
+  classroomChecks,
+  dormChecks,
+  students,
+} from "../drizzle/schema";
+import { eq, sql } from "drizzle-orm";
+import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 
 export const appRouter = router({
-    // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    me: publicProcedure.query((opts) => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -17,12 +37,380 @@ export const appRouter = router({
     }),
   }),
 
-  // TODO: add feature routers here, e.g.
-  // todo: router({
-  //   list: protectedProcedure.query(({ ctx }) =>
-  //     db.getUserTodos(ctx.user.id)
-  //   ),
-  // }),
+  // Student management
+  student: router({
+    search: protectedProcedure
+      .input(z.object({ query: z.string().min(1) }))
+      .query(async ({ input }) => {
+        const results = await searchStudents(input.query);
+        return results;
+      }),
+
+    getById: protectedProcedure
+      .input(z.object({ studentId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        const result = await db
+          .select()
+          .from(students)
+          .where(eq(students.id, input.studentId))
+          .limit(1);
+
+        return result.length > 0 ? result[0] : null;
+      }),
+  }),
+
+  // Clearance management
+  clearance: router({
+    initiate: protectedProcedure
+      .input(z.object({ studentId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        const clearance = await getOrCreateClearance(input.studentId, ctx.user.id);
+        if (!clearance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create clearance" });
+
+        return clearance;
+      }),
+
+    getDetails: protectedProcedure
+      .input(z.object({ clearanceId: z.number() }))
+      .query(async ({ input }) => {
+        const details = await getClearanceWithDetails(input.clearanceId);
+        if (!details) throw new TRPCError({ code: "NOT_FOUND", message: "Clearance not found" });
+        return details;
+      }),
+
+    getStatus: protectedProcedure
+      .input(z.object({ clearanceId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        const result = await db
+          .select()
+          .from(clearances)
+          .where(eq(clearances.id, input.clearanceId))
+          .limit(1);
+
+        return result.length > 0 ? result[0] : null;
+      }),
+
+    getSummary: protectedProcedure.query(async () => {
+      return await getClearanceStatusSummary();
+    }),
+
+    listAll: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+
+      const results = await db
+        .select({
+          id: clearances.id,
+          studentId: clearances.studentId,
+          status: clearances.status,
+          initiatedAt: clearances.initiatedAt,
+          completedAt: clearances.completedAt,
+          studentName: students.name,
+          studentIdValue: students.studentId,
+          program: students.program,
+        })
+        .from(clearances)
+        .leftJoin(students, eq(clearances.studentId, students.id))
+        .orderBy(sql`${clearances.createdAt} DESC`);
+
+      return results;
+    }),
+  }),
+
+  // Department sign-offs
+  departmentSignOff: router({
+    approve: protectedProcedure
+      .input(
+        z.object({
+          clearanceId: z.number(),
+          department: z.enum(["finance", "lab", "sports", "classroom", "dorm"]),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        const now = new Date();
+
+        // Update sign-off status
+        await db
+          .update(departmentSignOffs)
+          .set({
+            status: "approved",
+            signedOffBy: ctx.user.id,
+            signedOffAt: now,
+            notes: input.notes,
+            updatedAt: now,
+          })
+          .where(
+            sql`${departmentSignOffs.clearanceId} = ${input.clearanceId} AND ${departmentSignOffs.department} = ${input.department}`
+          );
+
+        // Check if all departments are approved
+        const allSignOffs = await db
+          .select()
+          .from(departmentSignOffs)
+          .where(eq(departmentSignOffs.clearanceId, input.clearanceId));
+
+        const allApproved = allSignOffs.every((s) => s.status === "approved");
+
+        if (allApproved) {
+          await db
+            .update(clearances)
+            .set({
+              status: "completed",
+              completedAt: now,
+              updatedAt: now,
+            })
+            .where(eq(clearances.id, input.clearanceId));
+        }
+
+        return { success: true, allApproved };
+      }),
+
+    flag: protectedProcedure
+      .input(
+        z.object({
+          clearanceId: z.number(),
+          department: z.enum(["finance", "lab", "sports", "classroom", "dorm"]),
+          notes: z.string(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        const now = new Date();
+
+        await db
+          .update(departmentSignOffs)
+          .set({
+            status: "flagged",
+            signedOffBy: ctx.user.id,
+            signedOffAt: now,
+            notes: input.notes,
+            updatedAt: now,
+          })
+          .where(
+            sql`${departmentSignOffs.clearanceId} = ${input.clearanceId} AND ${departmentSignOffs.department} = ${input.department}`
+          );
+
+        return { success: true };
+      }),
+
+    getForClearance: protectedProcedure
+      .input(z.object({ clearanceId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+
+        return await db
+          .select()
+          .from(departmentSignOffs)
+          .where(eq(departmentSignOffs.clearanceId, input.clearanceId));
+      }),
+  }),
+
+  // Finance checks
+  financeCheck: router({
+    add: protectedProcedure
+      .input(
+        z.object({
+          clearanceId: z.number(),
+          outstandingBalance: z.string(),
+          description: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        const result = await db.insert(financeChecks).values({
+          clearanceId: input.clearanceId,
+          outstandingBalance: input.outstandingBalance,
+          description: input.description,
+        });
+
+        return { success: true, id: (result as any).insertId };
+      }),
+
+    getForClearance: protectedProcedure
+      .input(z.object({ clearanceId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+
+        return await db
+          .select()
+          .from(financeChecks)
+          .where(eq(financeChecks.clearanceId, input.clearanceId));
+      }),
+  }),
+
+  // Lab checks
+  labCheck: router({
+    add: protectedProcedure
+      .input(
+        z.object({
+          clearanceId: z.number(),
+          equipmentName: z.string(),
+          damageAmount: z.string(),
+          description: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        const result = await db.insert(labChecks).values({
+          clearanceId: input.clearanceId,
+          equipmentName: input.equipmentName,
+          damageAmount: input.damageAmount,
+          description: input.description,
+        });
+
+        return { success: true, id: (result as any).insertId };
+      }),
+
+    getForClearance: protectedProcedure
+      .input(z.object({ clearanceId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+
+        return await db
+          .select()
+          .from(labChecks)
+          .where(eq(labChecks.clearanceId, input.clearanceId));
+      }),
+  }),
+
+  // Sports checks
+  sportsCheck: router({
+    add: protectedProcedure
+      .input(
+        z.object({
+          clearanceId: z.number(),
+          equipmentName: z.string(),
+          quantity: z.number(),
+          description: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        const result = await db.insert(sportsChecks).values({
+          clearanceId: input.clearanceId,
+          equipmentName: input.equipmentName,
+          quantity: input.quantity,
+          description: input.description,
+        });
+
+        return { success: true, id: (result as any).insertId };
+      }),
+
+    getForClearance: protectedProcedure
+      .input(z.object({ clearanceId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+
+        return await db
+          .select()
+          .from(sportsChecks)
+          .where(eq(sportsChecks.clearanceId, input.clearanceId));
+      }),
+  }),
+
+  // Classroom checks
+  classroomCheck: router({
+    add: protectedProcedure
+      .input(
+        z.object({
+          clearanceId: z.number(),
+          itemName: z.string(),
+          damageAmount: z.string(),
+          description: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        const result = await db.insert(classroomChecks).values({
+          clearanceId: input.clearanceId,
+          itemName: input.itemName,
+          damageAmount: input.damageAmount,
+          description: input.description,
+        });
+
+        return { success: true, id: (result as any).insertId };
+      }),
+
+    getForClearance: protectedProcedure
+      .input(z.object({ clearanceId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+
+        return await db
+          .select()
+          .from(classroomChecks)
+          .where(eq(classroomChecks.clearanceId, input.clearanceId));
+      }),
+  }),
+
+  // Dorm checks
+  dormCheck: router({
+    add: protectedProcedure
+      .input(
+        z.object({
+          clearanceId: z.number(),
+          itemName: z.string(),
+          damageAmount: z.string(),
+          description: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        const result = await db.insert(dormChecks).values({
+          clearanceId: input.clearanceId,
+          itemName: input.itemName,
+          damageAmount: input.damageAmount,
+          description: input.description,
+        });
+
+        return { success: true, id: (result as any).insertId };
+      }),
+
+    getForClearance: protectedProcedure
+      .input(z.object({ clearanceId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+
+        return await db
+          .select()
+          .from(dormChecks)
+          .where(eq(dormChecks.clearanceId, input.clearanceId));
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

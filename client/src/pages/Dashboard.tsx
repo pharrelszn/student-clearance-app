@@ -49,6 +49,7 @@ export default function Dashboard() {
       <div className="container py-12 md:py-16">
         {/* Header */}
         <div className="mb-12 md:mb-16">
+          <p className="text-lg font-bold text-[#800000] mb-2">Kabianga High School</p>
           <h1 className="text-editorial-heading mb-2">Clearance Portal</h1>
           <p className="text-editorial-subheading text-muted-foreground">
             Manage student clearance processes across all departments

@@ -5,7 +5,7 @@
 - [x] Create tRPC procedures for student search, clearance initiation, and department operations
 - [x] Implement department sign-off workflow logic
 - [x] Build clearance status calculation and tracking
-- [ ] Create certificate generation endpoint
+- [x] Create certificate generation endpoint
 
 ## Frontend - Layout & Design
 - [x] Set up editorial design system (cream background, serif typography, geometric lines)

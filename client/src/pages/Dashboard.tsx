@@ -95,6 +95,13 @@ export default function Dashboard() {
           >
             View All Clearances
           </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => setLocation("/admin")}
+          >
+            Admin Panel
+          </Button>
         </div>
 
         {/* Recent Clearances */}

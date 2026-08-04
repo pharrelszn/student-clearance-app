@@ -8,12 +8,16 @@ import Dashboard from "./pages/Dashboard";
 import StudentSearch from "./pages/StudentSearch";
 import ClearanceDetail from "./pages/ClearanceDetail";
 import ClearanceCertificate from "./pages/ClearanceCertificate";
+import AllClearances from "./pages/AllClearances";
+import AdminPanel from "./pages/AdminPanel";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/search" component={StudentSearch} />
+      <Route path="/clearances" component={AllClearances} />
+      <Route path="/admin" component={AdminPanel} />
       <Route path="/clearance/:id" component={ClearanceDetail} />
       <Route path="/certificate/:id" component={ClearanceCertificate} />
       <Route path="/404" component={NotFound} />

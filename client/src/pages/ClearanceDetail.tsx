@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle2, AlertCircle, Clock, ArrowLeft } from "lucide-react";
+import { CheckCircle2, AlertCircle, Clock, ArrowLeft, FileText } from "lucide-react";
 import DepartmentSignOff from "@/components/DepartmentSignOff";
 
 export default function ClearanceDetail() {
@@ -78,6 +78,19 @@ export default function ClearanceDetail() {
             Status and department approvals
           </p>
         </div>
+
+        {/* Certificate Section */}
+        {clearance.status === "completed" && (
+          <div className="mb-8">
+            <Button
+              onClick={() => setLocation(`/certificate/${clearanceId}`)}
+              className="bg-green-600 hover:bg-green-700 text-white gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              View & Download Certificate
+            </Button>
+          </div>
+        )}
 
         {/* Status Overview */}
         <Card className="border-border mb-8">

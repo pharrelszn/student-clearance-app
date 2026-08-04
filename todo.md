@@ -27,17 +27,17 @@
 - [x] Implement per-department sign-off UI components
 - [x] Build department approval/flag workflow
 - [x] Create clearance status tracking display
-- [ ] Implement real-time status updates
+- [x] Implement real-time status updates
 
 ## Certificate & Export
-- [ ] Build clearance certificate template
-- [ ] Implement PDF generation for certificates
-- [ ] Create certificate download functionality
-- [ ] Auto-trigger certificate generation on full clearance
+- [x] Build clearance certificate template
+- [x] Implement PDF generation for certificates
+- [x] Create certificate download functionality
+- [x] Auto-trigger certificate generation on full clearance
 
 ## Testing & Demo Data
 - [x] Seed demo students and clearance records
 - [x] Test all department workflows
-- [ ] Verify certificate generation
+- [x] Verify certificate generation
 - [x] Test status dashboard calculations
-- [ ] Create checkpoint for deployment
+- [x] Create checkpoint for deployment

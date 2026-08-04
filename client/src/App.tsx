@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Dashboard from "./pages/Dashboard";
 import StudentSearch from "./pages/StudentSearch";
 import ClearanceDetail from "./pages/ClearanceDetail";
+import ClearanceCertificate from "./pages/ClearanceCertificate";
 
 function Router() {
   return (
@@ -14,6 +15,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/search" component={StudentSearch} />
       <Route path="/clearance/:id" component={ClearanceDetail} />
+      <Route path="/certificate/:id" component={ClearanceCertificate} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

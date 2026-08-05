@@ -147,7 +147,7 @@ export default function AdminPanel() {
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium">Program *</label>
+                      <label className="text-sm font-medium">Form *</label>
                       <Input
                         value={studentForm.program}
                         onChange={(e) =>
@@ -156,7 +156,7 @@ export default function AdminPanel() {
                             program: e.target.value,
                           })
                         }
-                        placeholder="Computer Science"
+                        placeholder="Form 4"
                         className="mt-1 border-border"
                       />
                     </div>

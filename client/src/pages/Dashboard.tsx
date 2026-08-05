@@ -103,6 +103,24 @@ export default function Dashboard() {
           >
             Admin Panel
           </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => setLocation("/settings")}
+          >
+            Settings
+          </Button>
+          <Button
+            variant="destructive"
+            size="lg"
+            onClick={() => {
+              sessionStorage.removeItem("portalKeyword");
+              setLocation("/login");
+            }}
+            className="ml-auto"
+          >
+            Logout
+          </Button>
         </div>
 
         {/* Recent Clearances */}

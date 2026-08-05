@@ -129,11 +129,19 @@ export default function Settings() {
               </form>
 
               {/* Info Box */}
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-900">
-                  <strong>Note:</strong> Changing the keyword will affect all users. 
-                  They will need to use the new keyword to log in next time.
-                </p>
+              <div className="space-y-3">
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-900">
+                    <strong>Note:</strong> Changing the keyword will affect all users. 
+                    They will need to use the new keyword to log in next time.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-sm text-amber-900">
+                    <strong>Master Passcode:</strong> Emergency access for system administrators only. Default: kabianga2024
+                  </p>
+                </div>
               </div>
             </div>
           </CardContent>

@@ -46,12 +46,28 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Glass Header with Settings */}
+      <div className="sticky top-0 z-50 glass-header">
+        <div className="container flex items-center justify-between py-4">
+          <div />
+          <Button
+            variant="outline"
+            onClick={() => setLocation("/settings")}
+            className="border-border hover:bg-white/50 transition-all"
+          >
+            ⚙️ Settings
+          </Button>
+        </div>
+      </div>
+
       <div className="container py-12 md:py-16">
-        {/* Header */}
-        <div className="mb-12 md:mb-16">
-          <p className="text-lg font-bold text-[#800000] mb-2">Kabianga High School</p>
-          <h1 className="text-editorial-heading mb-2">Clearance Portal</h1>
-          <p className="text-editorial-subheading text-muted-foreground">
+        {/* Header with Glassmorphism Title */}
+        <div className="mb-12 md:mb-16 text-center">
+          <div className="inline-block mb-4 px-6 py-3 glassmorphism rounded-full">
+            <p className="text-lg font-bold title-shimmer title-glow">Kabianga High School</p>
+          </div>
+          <h1 className="text-editorial-heading mb-2 fade-in-up">Clearance Portal</h1>
+          <p className="text-editorial-subheading text-muted-foreground fade-in-up" style={{animationDelay: '0.1s'}}>
             Manage student clearance processes across all departments
           </p>
         </div>
@@ -62,15 +78,13 @@ export default function Dashboard() {
             const Icon = stat.icon;
             return (
               <Card key={stat.label} className="border-border">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm text-editorial-caption">
-                      {stat.label}
-                    </CardTitle>
-                    <div className={`${stat.bgColor} p-2 rounded`}>
+                <CardHeader className={`pb-3 ${stat.bgColor}`}>
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+                    {stat.label}
+                    <div className="p-2 rounded-lg bg-background">
                       <Icon className={`w-5 h-5 ${stat.color}`} />
                     </div>
-                  </div>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-foreground">{stat.value}</div>
@@ -104,13 +118,6 @@ export default function Dashboard() {
             Admin Panel
           </Button>
           <Button
-            variant="outline"
-            size="lg"
-            onClick={() => setLocation("/settings")}
-          >
-            Settings
-          </Button>
-          <Button
             variant="destructive"
             size="lg"
             onClick={() => {
@@ -127,11 +134,11 @@ export default function Dashboard() {
         <div>
           <h2 className="text-editorial-heading text-2xl mb-6">Recent Clearances</h2>
           {clearancesLoading ? (
-            <div className="flex justify-center py-8">
+            <div className="flex justify-center">
               <Spinner />
             </div>
           ) : clearances && clearances.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {clearances.slice(0, 5).map((clearance) => (
                 <Card
                   key={clearance.id}
@@ -141,28 +148,24 @@ export default function Dashboard() {
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-semibold text-foreground">
-                          {clearance.studentName}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {clearance.studentIdValue} • {clearance.program}
-                        </p>
+                        <p className="font-semibold text-foreground">{clearance.studentName}</p>
+                        <p className="text-sm text-muted-foreground">ID: {clearance.studentId}</p>
                       </div>
                       <div className="text-right">
-                        <span
-                          className={`inline-block px-3 py-1 rounded text-sm font-medium text-editorial-caption ${
-                            clearance.status === "completed"
-                              ? "bg-green-100 text-green-700"
-                              : clearance.status === "in_progress"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-amber-100 text-amber-700"
-                          }`}
-                        >
-                          {clearance.status === "in_progress"
-                            ? "In Progress"
-                            : clearance.status.charAt(0).toUpperCase() +
-                              clearance.status.slice(1)}
-                        </span>
+                        <p className="text-sm font-medium text-muted-foreground">
+                          {clearance.status === "completed" && (
+                            <span className="text-green-600">✓ Completed</span>
+                          )}
+                          {clearance.status === "in_progress" && (
+                            <span className="text-blue-600">⟳ In Progress</span>
+                          )}
+                          {clearance.status === "pending" && (
+                            <span className="text-amber-600">⊙ Pending</span>
+                          )}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {clearance.initiatedAt ? new Date(clearance.initiatedAt).toLocaleDateString() : 'N/A'}
+                        </p>
                       </div>
                     </div>
                   </CardContent>
@@ -171,7 +174,7 @@ export default function Dashboard() {
             </div>
           ) : (
             <Card className="border-border">
-              <CardContent className="pt-6 text-center py-8">
+              <CardContent className="pt-6 text-center">
                 <p className="text-muted-foreground">No clearances yet</p>
               </CardContent>
             </Card>

@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle2, AlertCircle, Clock, ArrowLeft, FileText } from "lucide-react";
+import { CheckCircle2, AlertCircle, Clock, ArrowLeft, FileText, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import DepartmentSignOff from "@/components/DepartmentSignOff";
 
 export default function ClearanceDetail() {
@@ -81,13 +82,25 @@ export default function ClearanceDetail() {
 
         {/* Certificate Section */}
         {clearance.status === "completed" && (
-          <div className="mb-8">
+          <div className="mb-8 flex gap-4">
             <Button
               onClick={() => setLocation(`/certificate/${clearanceId}`)}
               className="bg-green-600 hover:bg-green-700 text-white gap-2"
             >
               <FileText className="w-4 h-4" />
               View & Download Certificate
+            </Button>
+            <Button
+              onClick={() => {
+                if (confirm("Are you sure you want to delete this student's clearance data? This action cannot be undone.")) {
+                  toast.info("Delete functionality coming soon - use Database UI to remove records");
+                }
+              }}
+              variant="destructive"
+              className="gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete Student Data
             </Button>
           </div>
         )}

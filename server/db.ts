@@ -318,3 +318,107 @@ export async function updateAdminConfig(config: Partial<AdminConfigType>): Promi
   const result = await db.select().from(adminConfigs).limit(1);
   return result[0] || null;
 }
+
+/**
+ * Register a student with all department checks in one transaction
+ * This creates the student, clearance, and all selected department checks atomically
+ */
+export async function registerStudentWithDepartments(input: {
+  studentId: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  program: string;
+  yearOfStudy?: number;
+  graduationYear: number;
+  admissionNumber?: string;
+  finance: {
+    outstandingBalance: string;
+    description?: string;
+  };
+  departments?: {
+    lab?: { equipmentName: string; damageAmount: string; description?: string };
+    sports?: { equipmentName: string; description?: string };
+    classroom?: { itemName: string; damageAmount: string };
+    dorm?: { itemName: string; damageAmount: string };
+  };
+  initiatedBy?: string;
+}): Promise<{ studentId: number; clearanceId: number }> {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+
+  try {
+    // 1. Create student
+    const studentResult = await db.insert(students).values({
+      studentId: input.studentId,
+      name: input.name,
+      email: input.email,
+      phone: input.phone,
+      program: input.program,
+      yearOfStudy: input.yearOfStudy,
+      graduationYear: input.graduationYear,
+      admissionNumber: input.admissionNumber,
+    });
+
+    const newStudentId = (studentResult as any).insertId;
+
+    // 2. Create clearance
+    const now = new Date();
+    const clearanceResult = await db.insert(clearances).values({
+      studentId: newStudentId,
+      status: 'in_progress',
+      initiatedBy: 1, // Default admin user ID
+      initiatedAt: now,
+      completedAt: null,
+      certificateUrl: null,
+    });
+
+    const newClearanceId = (clearanceResult as any).insertId;
+
+    // 3. Create finance check (mandatory)
+    await db.insert(financeChecks).values({
+      clearanceId: newClearanceId,
+      outstandingBalance: input.finance.outstandingBalance,
+      description: input.finance.description,
+    });
+
+    // 4. Create optional department checks
+    if (input.departments?.lab) {
+      await db.insert(labChecks).values({
+        clearanceId: newClearanceId,
+        equipmentName: input.departments.lab.equipmentName,
+        damageAmount: input.departments.lab.damageAmount,
+        description: input.departments.lab.description,
+      });
+    }
+
+    if (input.departments?.sports) {
+      await db.insert(sportsChecks).values({
+        clearanceId: newClearanceId,
+        equipmentName: input.departments.sports.equipmentName,
+        description: input.departments.sports.description,
+      });
+    }
+
+    if (input.departments?.classroom) {
+      await db.insert(classroomChecks).values({
+        clearanceId: newClearanceId,
+        itemName: input.departments.classroom.itemName,
+        damageAmount: input.departments.classroom.damageAmount,
+      });
+    }
+
+    if (input.departments?.dorm) {
+      await db.insert(dormChecks).values({
+        clearanceId: newClearanceId,
+        itemName: input.departments.dorm.itemName,
+        damageAmount: input.departments.dorm.damageAmount,
+      });
+    }
+
+    return { studentId: newStudentId, clearanceId: newClearanceId };
+  } catch (error) {
+    console.error("[Database] Failed to register student:", error);
+    throw error;
+  }
+}

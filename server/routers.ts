@@ -12,6 +12,7 @@ import {
   getUserById,
   getAdminConfig,
   updateAdminConfig,
+  registerStudentWithDepartments,
 } from "./db";
 import {
   clearances,
@@ -84,6 +85,45 @@ export const appRouter = router({
         });
 
         return { success: true, message: "Student created successfully" };
+      }),
+
+    registerWithDepartments: protectedProcedure
+      .input(z.object({
+        studentId: z.string().min(1),
+        name: z.string().min(1),
+        email: z.string().email().optional(),
+        phone: z.string().optional(),
+        program: z.string().min(1),
+        yearOfStudy: z.number().optional(),
+        graduationYear: z.number().min(2020).max(2100),
+        admissionNumber: z.string().optional(),
+        finance: z.object({
+          outstandingBalance: z.string().min(1),
+          description: z.string().optional(),
+        }),
+        departments: z.object({
+          lab: z.object({
+            equipmentName: z.string(),
+            damageAmount: z.string(),
+            description: z.string().optional(),
+          }).optional(),
+          sports: z.object({
+            equipmentName: z.string(),
+            description: z.string().optional(),
+          }).optional(),
+          classroom: z.object({
+            itemName: z.string(),
+            damageAmount: z.string(),
+          }).optional(),
+          dorm: z.object({
+            itemName: z.string(),
+            damageAmount: z.string(),
+          }).optional(),
+        }).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const result = await registerStudentWithDepartments(input);
+        return { success: true, studentId: result.studentId, clearanceId: result.clearanceId };
       }),
 
     delete: protectedProcedure

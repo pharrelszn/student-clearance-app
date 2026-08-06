@@ -118,6 +118,13 @@ export default function Dashboard() {
             Admin Panel
           </Button>
           <Button
+            size="lg"
+            className="bg-blue-600 text-white hover:bg-blue-700"
+            onClick={() => setLocation("/register")}
+          >
+            Register Student
+          </Button>
+          <Button
             variant="destructive"
             size="lg"
             onClick={() => {

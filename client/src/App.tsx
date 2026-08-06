@@ -10,6 +10,7 @@ import ClearanceDetail from "./pages/ClearanceDetail";
 import ClearanceCertificate from "./pages/ClearanceCertificate";
 import AllClearances from "./pages/AllClearances";
 import AdminPanel from "./pages/AdminPanel";
+import StudentRegistration from "./pages/StudentRegistration";
 import Login from "./pages/Login";
 import Settings from "./pages/Settings";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -17,15 +18,16 @@ import ProtectedRoute from "./components/ProtectedRoute";
 function Router() {
   return (
     <Switch>
-      <Route path="/login" component={Login} />
-      <Route path="/" component={() => <ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/search" component={() => <ProtectedRoute><StudentSearch /></ProtectedRoute>} />
-      <Route path="/clearances" component={() => <ProtectedRoute><AllClearances /></ProtectedRoute>} />
-      <Route path="/admin" component={() => <ProtectedRoute><AdminPanel /></ProtectedRoute>} />
-      <Route path="/clearance/:id" component={() => <ProtectedRoute><ClearanceDetail /></ProtectedRoute>} />
-      <Route path="/certificate/:id" component={() => <ProtectedRoute><ClearanceCertificate /></ProtectedRoute>} />
-      <Route path="/settings" component={() => <ProtectedRoute><Settings /></ProtectedRoute>} />
-      <Route path="/404" component={NotFound} />
+      <Route path={"/login"} component={Login} />
+      <Route path={"/"} component={() => <ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path={"/search"} component={() => <ProtectedRoute><StudentSearch /></ProtectedRoute>} />
+      <Route path={"/clearances"} component={() => <ProtectedRoute><AllClearances /></ProtectedRoute>} />
+      <Route path={"/admin"} component={() => <ProtectedRoute><AdminPanel /></ProtectedRoute>} />
+      <Route path={"/register"} component={() => <ProtectedRoute><StudentRegistration /></ProtectedRoute>} />
+      <Route path={"/clearance/:id"} component={() => <ProtectedRoute><ClearanceDetail /></ProtectedRoute>} />
+      <Route path={"/certificate/:id"} component={() => <ProtectedRoute><ClearanceCertificate /></ProtectedRoute>} />
+      <Route path={"/settings"} component={() => <ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
   );

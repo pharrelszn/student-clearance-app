@@ -52,8 +52,11 @@ export const students = mysqlTable("students", {
   studentId: varchar("studentId", { length: 64 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email", { length: 320 }),
+  phone: varchar("phone", { length: 20 }),
   program: varchar("program", { length: 255 }).notNull(),
+  yearOfStudy: int("yearOfStudy"),
   graduationYear: int("graduationYear").notNull(),
+  admissionNumber: varchar("admissionNumber", { length: 64 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

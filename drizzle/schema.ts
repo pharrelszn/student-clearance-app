@@ -119,7 +119,7 @@ export const sportsChecks = mysqlTable("sportsChecks", {
   id: int("id").autoincrement().primaryKey(),
   clearanceId: int("clearanceId").notNull(),
   equipmentName: varchar("equipmentName", { length: 255 }).notNull(),
-  quantity: int("quantity").notNull(),
+  quantity: int("quantity").default(1).notNull(),
   returned: boolean("returned").default(false).notNull(),
   description: text("description"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

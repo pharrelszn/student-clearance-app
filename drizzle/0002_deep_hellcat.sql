@@ -1,0 +1,1 @@
+ALTER TABLE `sportsChecks` MODIFY COLUMN `quantity` int NOT NULL DEFAULT 1;

@@ -15,6 +15,13 @@
       "when": 1785835233376,
       "tag": "0001_low_hairball",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1786039916376,
+      "tag": "0002_deep_hellcat",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,5 @@
 import { COOKIE_NAME } from "@shared/const";
+import { students as studentsTable } from "../drizzle/schema";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
@@ -19,6 +20,7 @@ import {
   classroomChecks,
   dormChecks,
   students,
+  departmentSignOffs as deptSignOffs,
 } from "../drizzle/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -59,6 +61,55 @@ export const appRouter = router({
           .limit(1);
 
         return result.length > 0 ? result[0] : null;
+      }),
+
+    create: protectedProcedure
+      .input(z.object({
+        studentId: z.string().min(1),
+        name: z.string().min(1),
+        program: z.string().min(1),
+        graduationYear: z.number().min(2020).max(2100),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        const result = await db.insert(students).values({
+          studentId: input.studentId,
+          name: input.name,
+          program: input.program,
+          graduationYear: input.graduationYear,
+        });
+
+        return { success: true, message: "Student created successfully" };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ studentId: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        // Delete related clearances first
+        const clearancesToDelete = await db
+          .select({ id: clearances.id })
+          .from(clearances)
+          .where(eq(clearances.studentId, input.studentId));
+
+        for (const clearance of clearancesToDelete) {
+          await db.delete(departmentSignOffs).where(eq(departmentSignOffs.clearanceId, clearance.id));
+          await db.delete(financeChecks).where(eq(financeChecks.clearanceId, clearance.id));
+          await db.delete(labChecks).where(eq(labChecks.clearanceId, clearance.id));
+          await db.delete(sportsChecks).where(eq(sportsChecks.clearanceId, clearance.id));
+          await db.delete(classroomChecks).where(eq(classroomChecks.clearanceId, clearance.id));
+          await db.delete(dormChecks).where(eq(dormChecks.clearanceId, clearance.id));
+          await db.delete(clearances).where(eq(clearances.id, clearance.id));
+        }
+
+        // Delete student
+        await db.delete(students).where(eq(students.id, input.studentId));
+
+        return { success: true, message: "Student and related data deleted successfully" };
       }),
   }),
 
@@ -305,7 +356,7 @@ export const appRouter = router({
         z.object({
           clearanceId: z.number(),
           equipmentName: z.string(),
-          quantity: z.number(),
+          quantity: z.number().optional().default(1),
           description: z.string().optional(),
         })
       )

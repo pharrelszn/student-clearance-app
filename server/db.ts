@@ -348,18 +348,17 @@ export async function registerStudentWithDepartments(input: {
   if (!db) throw new Error("Database unavailable");
 
   try {
-    // 1. Create student
+    // 1. Create student with explicit values
     const studentValues: any = {
-      studentId: input.studentId,
-      name: input.name,
-      program: input.program,
-      graduationYear: input.graduationYear,
+      studentId: input.studentId || "",
+      name: input.name || "",
+      program: input.program || "",
+      graduationYear: input.graduationYear || new Date().getFullYear(),
+      email: input.email || null,
+      phone: input.phone || null,
+      yearOfStudy: input.yearOfStudy || null,
+      admissionNumber: input.admissionNumber || null,
     };
-    
-    if (input.email) studentValues.email = input.email;
-    if (input.phone) studentValues.phone = input.phone;
-    if (input.yearOfStudy) studentValues.yearOfStudy = input.yearOfStudy;
-    if (input.admissionNumber) studentValues.admissionNumber = input.admissionNumber;
     
     const studentResult = await db.insert(students).values(studentValues);
 

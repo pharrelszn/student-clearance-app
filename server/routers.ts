@@ -10,6 +10,8 @@ import {
   getClearanceStatusSummary,
   getDb,
   getUserById,
+  getAdminConfig,
+  updateAdminConfig,
 } from "./db";
 import {
   clearances,
@@ -461,7 +463,29 @@ export const appRouter = router({
           .from(dormChecks)
           .where(eq(dormChecks.clearanceId, input.clearanceId));
       }),
+    }),
+
+  // Admin configuration
+  adminConfig: router({
+    get: protectedProcedure.query(async () => {
+      const config = await getAdminConfig();
+      return config || { enableSports: false, enableDorm: false, enableLab: false, enableClassroom: false, enableFinance: false };
+    }),
+
+    update: protectedProcedure
+      .input(
+        z.object({
+          enableSports: z.boolean().optional(),
+          enableDorm: z.boolean().optional(),
+          enableLab: z.boolean().optional(),
+          enableClassroom: z.boolean().optional(),
+          enableFinance: z.boolean().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const config = await updateAdminConfig(input);
+        return config || { enableSports: false, enableDorm: false, enableLab: false, enableClassroom: false, enableFinance: false };
+      }),
   }),
 });
-
 export type AppRouter = typeof appRouter;

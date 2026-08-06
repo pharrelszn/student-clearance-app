@@ -28,6 +28,23 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 /**
+ * Admin configuration table - stores which information categories are enabled
+ */
+export const adminConfigs = mysqlTable("adminConfigs", {
+  id: int("id").autoincrement().primaryKey(),
+  enableSports: boolean("enableSports").default(false).notNull(),
+  enableDorm: boolean("enableDorm").default(false).notNull(),
+  enableLab: boolean("enableLab").default(false).notNull(),
+  enableClassroom: boolean("enableClassroom").default(false).notNull(),
+  enableFinance: boolean("enableFinance").default(false).notNull(),
+  configuredAt: timestamp("configuredAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AdminConfig = typeof adminConfigs.$inferSelect;
+export type InsertAdminConfig = typeof adminConfigs.$inferInsert;
+
+/**
  * Students table - core student records
  */
 export const students = mysqlTable("students", {

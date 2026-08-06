@@ -11,9 +11,11 @@ import {
   sportsChecks,
   classroomChecks,
   dormChecks,
+  adminConfigs,
+  type AdminConfig,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
-import type { Student, Clearance, DepartmentSignOff } from '../drizzle/schema';
+import type { Student, Clearance, DepartmentSignOff, AdminConfig as AdminConfigType } from '../drizzle/schema';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -266,4 +268,53 @@ export async function getClearanceStatusSummary() {
   });
 
   return summary;
+}
+
+/**
+ * Get or create admin configuration
+ */
+export async function getAdminConfig(): Promise<AdminConfigType | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(adminConfigs).limit(1);
+  
+  if (result.length === 0) {
+    // Create default config if none exists
+    await db.insert(adminConfigs).values({
+      enableSports: false,
+      enableDorm: false,
+      enableLab: false,
+      enableClassroom: false,
+      enableFinance: false,
+    });
+    const newResult = await db.select().from(adminConfigs).limit(1);
+    return newResult[0] || null;
+  }
+
+  return result[0];
+}
+
+/**
+ * Update admin configuration
+ */
+export async function updateAdminConfig(config: Partial<AdminConfigType>): Promise<AdminConfigType | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const updates: any = {};
+  if (config.enableSports !== undefined) updates.enableSports = config.enableSports;
+  if (config.enableDorm !== undefined) updates.enableDorm = config.enableDorm;
+  if (config.enableLab !== undefined) updates.enableLab = config.enableLab;
+  if (config.enableClassroom !== undefined) updates.enableClassroom = config.enableClassroom;
+  if (config.enableFinance !== undefined) updates.enableFinance = config.enableFinance;
+
+  if (Object.keys(updates).length === 0) return null;
+
+  updates.updatedAt = new Date();
+
+  await db.update(adminConfigs).set(updates);
+  
+  const result = await db.select().from(adminConfigs).limit(1);
+  return result[0] || null;
 }

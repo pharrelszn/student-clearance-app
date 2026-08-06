@@ -360,9 +360,16 @@ export async function registerStudentWithDepartments(input: {
       admissionNumber: input.admissionNumber || null,
     };
     
-    const studentResult = await db.insert(students).values(studentValues);
+    await db.insert(students).values(studentValues);
 
-    const newStudentId = (studentResult as any).insertId;
+    // Query the newly inserted student by studentId to get the database ID
+    const insertedStudent = await db.select().from(students).where(eq(students.studentId, input.studentId)).limit(1);
+    
+    if (!insertedStudent || insertedStudent.length === 0) {
+      throw new Error("Failed to retrieve inserted student");
+    }
+    
+    const newStudentId = insertedStudent[0].id;
 
     // 2. Create clearance
     const now = new Date();

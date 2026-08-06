@@ -381,7 +381,7 @@ export async function registerStudentWithDepartments(input: {
     // 3. Create finance check (mandatory)
     await db.insert(financeChecks).values({
       clearanceId: newClearanceId,
-      outstandingBalance: input.finance.outstandingBalance,
+      outstandingBalance: input.finance.outstandingBalance as any,
       description: input.finance.description,
     });
 
@@ -390,7 +390,7 @@ export async function registerStudentWithDepartments(input: {
       await db.insert(labChecks).values({
         clearanceId: newClearanceId,
         equipmentName: input.departments.lab.equipmentName,
-        damageAmount: input.departments.lab.damageAmount,
+        damageAmount: input.departments.lab.damageAmount as any,
         description: input.departments.lab.description,
       });
     }
@@ -407,7 +407,7 @@ export async function registerStudentWithDepartments(input: {
       await db.insert(classroomChecks).values({
         clearanceId: newClearanceId,
         itemName: input.departments.classroom.itemName,
-        damageAmount: input.departments.classroom.damageAmount,
+        damageAmount: input.departments.classroom.damageAmount as any,
       });
     }
 
@@ -415,7 +415,7 @@ export async function registerStudentWithDepartments(input: {
       await db.insert(dormChecks).values({
         clearanceId: newClearanceId,
         itemName: input.departments.dorm.itemName,
-        damageAmount: input.departments.dorm.damageAmount,
+        damageAmount: input.departments.dorm.damageAmount as any,
       });
     }
 

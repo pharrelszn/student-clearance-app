@@ -1,26 +1,9 @@
-import { eq, sql, like } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import {
-  InsertUser,
-  users,
-  students,
-  clearances,
-  departmentSignOffs,
-  financeChecks,
-  labChecks,
-  sportsChecks,
-  classroomChecks,
-  dormChecks,
-  adminConfigs,
-  type AdminConfig,
-} from "../drizzle/schema";
+import { InsertUser, users, students, clearances, financeChecks, labChecks, sportsChecks, classroomChecks, dormChecks, adminConfigs, departmentSignOffs } from "../drizzle/schema";
 import { ENV } from './_core/env';
-import type { Student, Clearance, DepartmentSignOff, AdminConfig as AdminConfigType } from '../drizzle/schema';
 
 let _db: ReturnType<typeof drizzle> | null = null;
-
-// Re-export for convenience
-export type { Student, Clearance, DepartmentSignOff };
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
@@ -106,223 +89,141 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-/**
- * Get user by ID
- */
-export async function getUserById(userId: number) {
+export async function getStudentById(id: number) {
   const db = await getDb();
-  if (!db) return undefined;
-
-  const result = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  if (!db) throw new Error("Database unavailable");
+  const result = await db.select().from(students).where(eq(students.id, id)).limit(1);
+  return result.length > 0 ? result[0] : null;
 }
 
-/**
- * Get student by ID with full clearance details
- */
-export async function getStudentWithClearance(studentId: number) {
+export async function getStudentByStudentId(studentId: string) {
   const db = await getDb();
-  if (!db) return undefined;
-
-  const result = await db
-    .select()
-    .from(students)
-    .where(eq(students.id, studentId))
-    .limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  if (!db) throw new Error("Database unavailable");
+  const result = await db.select().from(students).where(eq(students.studentId, studentId)).limit(1);
+  return result.length > 0 ? result[0] : null;
 }
 
-/**
- * Search students by name or student ID
- */
-export async function searchStudents(query: string) {
+export async function getAllStudents() {
   const db = await getDb();
-  if (!db) return [];
-
-  const searchPattern = `%${query}%`;
-
-  const results = await db
-    .select()
-    .from(students)
-    .where(
-      query.length > 0
-        ? like(students.name, searchPattern)
-        : undefined
-    )
-    .limit(20);
-
-  return results;
+  if (!db) throw new Error("Database unavailable");
+  return await db.select().from(students);
 }
 
-/**
- * Get or create clearance for a student
- */
-export async function getOrCreateClearance(studentId: number, initiatedBy: number) {
+export async function createStudent(data: {
+  studentId: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  program: string;
+  yearOfStudy?: number;
+  graduationYear: number;
+  admissionNumber?: string;
+}) {
   const db = await getDb();
-  if (!db) return undefined;
+  if (!db) throw new Error("Database unavailable");
 
-  // Check if clearance exists
-  const existing = await db
-    .select()
-    .from(clearances)
-    .where(eq(clearances.studentId, studentId))
-    .limit(1);
-
-  if (existing.length > 0) {
-    return existing[0];
-  }
-
-  // Create new clearance and department sign-offs
-  const departments = ['finance', 'lab', 'sports', 'classroom', 'dorm'] as const;
-  const now = new Date();
-
-  const insertResult = await db.insert(clearances).values({
-    studentId,
-    status: 'in_progress',
-    initiatedBy,
-    initiatedAt: now,
-  });
-
-  const clearanceId = (insertResult as any).insertId;
-
-  // Create sign-off records for each department
-  await db.insert(departmentSignOffs).values(
-    departments.map((dept) => ({
-      clearanceId,
-      department: dept,
-      status: 'pending' as const,
-    }))
-  );
-
-  return {
-    id: clearanceId,
-    studentId,
-    status: 'in_progress',
-    initiatedBy,
-    initiatedAt: now,
-    completedAt: null,
-    certificateUrl: null,
-    createdAt: now,
-    updatedAt: now,
+  const insertData: any = {
+    studentId: data.studentId,
+    name: data.name,
+    program: data.program,
+    graduationYear: data.graduationYear,
   };
-}
 
-/**
- * Get all clearances with their department sign-offs
- */
-export async function getClearanceWithDetails(clearanceId: number) {
-  const db = await getDb();
-  if (!db) return undefined;
+  if (data.email) insertData.email = data.email;
+  if (data.phone) insertData.phone = data.phone;
+  if (data.yearOfStudy) insertData.yearOfStudy = data.yearOfStudy;
+  if (data.admissionNumber) insertData.admissionNumber = data.admissionNumber;
 
-  const result = await db
-    .select()
-    .from(clearances)
-    .where(eq(clearances.id, clearanceId))
-    .limit(1);
-
-  if (result.length === 0) return undefined;
-
-  const clearance = result[0];
-
-  const [signOffs, financeData, labData, sportsData, classroomData, dormData] = await Promise.all([
-    db.select().from(departmentSignOffs).where(eq(departmentSignOffs.clearanceId, clearanceId)),
-    db.select().from(financeChecks).where(eq(financeChecks.clearanceId, clearanceId)),
-    db.select().from(labChecks).where(eq(labChecks.clearanceId, clearanceId)),
-    db.select().from(sportsChecks).where(eq(sportsChecks.clearanceId, clearanceId)),
-    db.select().from(classroomChecks).where(eq(classroomChecks.clearanceId, clearanceId)),
-    db.select().from(dormChecks).where(eq(dormChecks.clearanceId, clearanceId)),
-  ]);
-
-  return {
-    ...clearance,
-    departmentSignOffs: signOffs,
-    financeChecks: financeData,
-    labChecks: labData,
-    sportsChecks: sportsData,
-    classroomChecks: classroomData,
-    dormChecks: dormData,
-  };
-}
-
-/**
- * Get clearance status summary
- */
-export async function getClearanceStatusSummary() {
-  const db = await getDb();
-  if (!db) return { pending: 0, inProgress: 0, completed: 0 };
-
-  const results = await db
-    .select({
-      status: clearances.status,
-      count: sql<number>`COUNT(*) as count`,
-    })
-    .from(clearances)
-    .groupBy(clearances.status);
-
-  const summary = { pending: 0, inProgress: 0, completed: 0 };
-  results.forEach((row) => {
-    if (row.status === 'pending') summary.pending = row.count;
-    if (row.status === 'in_progress') summary.inProgress = row.count;
-    if (row.status === 'completed') summary.completed = row.count;
-  });
-
-  return summary;
-}
-
-/**
- * Get or create admin configuration
- */
-export async function getAdminConfig(): Promise<AdminConfigType | null> {
-  const db = await getDb();
-  if (!db) return null;
-
-  const result = await db.select().from(adminConfigs).limit(1);
+  await db.insert(students).values(insertData);
   
-  if (result.length === 0) {
-    // Create default config if none exists
-    await db.insert(adminConfigs).values({
-      enableSports: false,
-      enableDorm: false,
-      enableLab: false,
-      enableClassroom: false,
-      enableFinance: false,
-    });
-    const newResult = await db.select().from(adminConfigs).limit(1);
-    return newResult[0] || null;
+  // Retrieve the inserted student
+  const result = await db.select().from(students).where(eq(students.studentId, data.studentId)).limit(1);
+  if (!result || result.length === 0) {
+    throw new Error("Failed to retrieve inserted student");
   }
-
   return result[0];
 }
 
-/**
- * Update admin configuration
- */
-export async function updateAdminConfig(config: Partial<AdminConfigType>): Promise<AdminConfigType | null> {
+export async function deleteStudent(studentId: number) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) throw new Error("Database unavailable");
 
-  const updates: any = {};
-  if (config.enableSports !== undefined) updates.enableSports = config.enableSports;
-  if (config.enableDorm !== undefined) updates.enableDorm = config.enableDorm;
-  if (config.enableLab !== undefined) updates.enableLab = config.enableLab;
-  if (config.enableClassroom !== undefined) updates.enableClassroom = config.enableClassroom;
-  if (config.enableFinance !== undefined) updates.enableFinance = config.enableFinance;
-
-  if (Object.keys(updates).length === 0) return null;
-
-  updates.updatedAt = new Date();
-
-  await db.update(adminConfigs).set(updates);
+  // Delete related records first
+  const clearanceRecords = await db.select().from(clearances).where(eq(clearances.studentId, studentId));
   
-  const result = await db.select().from(adminConfigs).limit(1);
-  return result[0] || null;
+  for (const clearance of clearanceRecords) {
+    await db.delete(financeChecks).where(eq(financeChecks.clearanceId, clearance.id));
+    await db.delete(labChecks).where(eq(labChecks.clearanceId, clearance.id));
+    await db.delete(sportsChecks).where(eq(sportsChecks.clearanceId, clearance.id));
+    await db.delete(classroomChecks).where(eq(classroomChecks.clearanceId, clearance.id));
+    await db.delete(dormChecks).where(eq(dormChecks.clearanceId, clearance.id));
+  }
+
+  await db.delete(clearances).where(eq(clearances.studentId, studentId));
+  await db.delete(students).where(eq(students.id, studentId));
 }
 
-/**
- * Register a student with all department checks in one transaction
- * This creates the student, clearance, and all selected department checks atomically
- */
+export async function getClearanceWithDetails(clearanceId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+
+  const clearanceData = await db.select().from(clearances).where(eq(clearances.id, clearanceId)).limit(1);
+  if (!clearanceData || clearanceData.length === 0) return null;
+
+  const clearance = clearanceData[0];
+  const financeData = await db.select().from(financeChecks).where(eq(financeChecks.clearanceId, clearanceId));
+  const labData = await db.select().from(labChecks).where(eq(labChecks.clearanceId, clearanceId));
+  const sportsData = await db.select().from(sportsChecks).where(eq(sportsChecks.clearanceId, clearanceId));
+  const classroomData = await db.select().from(classroomChecks).where(eq(classroomChecks.clearanceId, clearanceId));
+  const dormData = await db.select().from(dormChecks).where(eq(dormChecks.clearanceId, clearanceId));
+  const signOffsData = await db.select().from(departmentSignOffs).where(eq(departmentSignOffs.clearanceId, clearanceId));
+
+  return {
+    ...clearance,
+    finance: financeData.length > 0 ? financeData[0] : null,
+    lab: labData.length > 0 ? labData[0] : null,
+    sports: sportsData.length > 0 ? sportsData[0] : null,
+    classroom: classroomData.length > 0 ? classroomData[0] : null,
+    dorm: dormData.length > 0 ? dormData[0] : null,
+    departmentSignOffs: signOffsData,
+  };
+}
+
+export async function getAdminConfig() {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const result = await db.select().from(adminConfigs).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function updateAdminConfig(config: {
+  enableFinance?: boolean;
+  enableLab?: boolean;
+  enableSports?: boolean;
+  enableClassroom?: boolean;
+  enableDorm?: boolean;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+
+  const existing = await getAdminConfig();
+  
+  if (existing) {
+    await db.update(adminConfigs).set(config).where(eq(adminConfigs.id, existing.id));
+    return { ...existing, ...config };
+  } else {
+    const newConfig = {
+      enableFinance: config.enableFinance ?? false,
+      enableLab: config.enableLab ?? false,
+      enableSports: config.enableSports ?? false,
+      enableClassroom: config.enableClassroom ?? false,
+      enableDorm: config.enableDorm ?? false,
+    };
+    await db.insert(adminConfigs).values(newConfig);
+    return newConfig;
+  }
+}
+
 export async function registerStudentWithDepartments(input: {
   studentId: string;
   name: string;
@@ -342,92 +243,169 @@ export async function registerStudentWithDepartments(input: {
     classroom?: { itemName: string; damageAmount: string };
     dorm?: { itemName: string; damageAmount: string };
   };
-  initiatedBy?: string;
 }): Promise<{ studentId: number; clearanceId: number }> {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
 
   try {
-    // 1. Create student with explicit values
-    const studentValues: any = {
-      studentId: input.studentId || "",
-      name: input.name || "",
-      program: input.program || "",
-      graduationYear: input.graduationYear || new Date().getFullYear(),
-      email: input.email || null,
-      phone: input.phone || null,
-      yearOfStudy: input.yearOfStudy || null,
-      admissionNumber: input.admissionNumber || null,
-    };
-    
-    await db.insert(students).values(studentValues);
+    // 1. Create student
+    const student = await createStudent({
+      studentId: input.studentId,
+      name: input.name,
+      email: input.email,
+      phone: input.phone,
+      program: input.program,
+      yearOfStudy: input.yearOfStudy,
+      graduationYear: input.graduationYear,
+      admissionNumber: input.admissionNumber,
+    });
 
-    // Query the newly inserted student by studentId to get the database ID
-    const insertedStudent = await db.select().from(students).where(eq(students.studentId, input.studentId)).limit(1);
-    
-    if (!insertedStudent || insertedStudent.length === 0) {
-      throw new Error("Failed to retrieve inserted student");
-    }
-    
-    const newStudentId = insertedStudent[0].id;
+    const newStudentId = student.id;
 
     // 2. Create clearance
     const now = new Date();
-    const clearanceResult = await db.insert(clearances).values({
+    await db.insert(clearances).values({
       studentId: newStudentId,
       status: 'in_progress',
-      initiatedBy: 1, // Default admin user ID
+      initiatedBy: 1,
       initiatedAt: now,
       completedAt: null,
       certificateUrl: null,
     });
 
-    const newClearanceId = (clearanceResult as any).insertId;
+    // Get the clearance ID
+    const clearanceData = await db.select().from(clearances).where(eq(clearances.studentId, newStudentId)).limit(1);
+    if (!clearanceData || clearanceData.length === 0) {
+      throw new Error("Failed to create clearance");
+    }
+    const newClearanceId = clearanceData[0].id;
 
     // 3. Create finance check (mandatory)
     await db.insert(financeChecks).values({
       clearanceId: newClearanceId,
       outstandingBalance: input.finance.outstandingBalance as any,
-      description: input.finance.description,
+      description: input.finance.description || null,
     });
 
-    // 4. Create optional department checks
+    // 4. Create departmentSignOffs for Finance (mandatory)
+    await db.insert(departmentSignOffs).values({
+      clearanceId: newClearanceId,
+      department: 'finance',
+      status: 'pending',
+    });
+
+    // 5. Create finance check (mandatory)
+    await db.insert(financeChecks).values({
+      clearanceId: newClearanceId,
+      outstandingBalance: input.finance.outstandingBalance as any,
+      description: input.finance.description || null,
+    });
+
+    // 6. Create optional department checks and sign-offs
     if (input.departments?.lab) {
+      await db.insert(departmentSignOffs).values({
+        clearanceId: newClearanceId,
+        department: 'lab',
+        status: 'pending',
+      });
       await db.insert(labChecks).values({
         clearanceId: newClearanceId,
         equipmentName: input.departments.lab.equipmentName,
         damageAmount: input.departments.lab.damageAmount as any,
-        description: input.departments.lab.description,
+        description: input.departments.lab.description || null,
       });
     }
 
     if (input.departments?.sports) {
+      await db.insert(departmentSignOffs).values({
+        clearanceId: newClearanceId,
+        department: 'sports',
+        status: 'pending',
+      });
       await db.insert(sportsChecks).values({
         clearanceId: newClearanceId,
         equipmentName: input.departments.sports.equipmentName,
-        description: input.departments.sports.description,
+        description: input.departments.sports.description || null,
       });
     }
 
     if (input.departments?.classroom) {
+      await db.insert(departmentSignOffs).values({
+        clearanceId: newClearanceId,
+        department: 'classroom',
+        status: 'pending',
+      });
       await db.insert(classroomChecks).values({
         clearanceId: newClearanceId,
         itemName: input.departments.classroom.itemName,
         damageAmount: input.departments.classroom.damageAmount as any,
+        description: null,
       });
     }
 
     if (input.departments?.dorm) {
+      await db.insert(departmentSignOffs).values({
+        clearanceId: newClearanceId,
+        department: 'dorm',
+        status: 'pending',
+      });
       await db.insert(dormChecks).values({
         clearanceId: newClearanceId,
         itemName: input.departments.dorm.itemName,
         damageAmount: input.departments.dorm.damageAmount as any,
+        description: null,
       });
     }
 
     return { studentId: newStudentId, clearanceId: newClearanceId };
   } catch (error) {
-    console.error("[Database] Failed to register student:", error);
-    throw error;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("[Database] Failed to register student:", errorMessage);
+    throw new Error(`Failed to register student: ${errorMessage}`);
   }
+}
+
+
+export async function searchStudents(query: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  
+  return await db.select().from(students).where(
+    query ? eq(students.studentId, query) : undefined
+  ).limit(10);
+}
+
+export async function getClearanceStatusSummary() {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+
+  const allClearances = await db.select().from(clearances);
+  
+  const pending = allClearances.filter(c => c.status === 'pending').length;
+  const inProgress = allClearances.filter(c => c.status === 'in_progress').length;
+  const completed = allClearances.filter(c => c.status === 'completed').length;
+
+  return { pending, inProgress, completed, total: allClearances.length };
+}
+
+export async function getOrCreateClearance(studentId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+
+  const existing = await db.select().from(clearances).where(eq(clearances.studentId, studentId)).limit(1);
+  
+  if (existing && existing.length > 0) {
+    return existing[0];
+  }
+
+  const now = new Date();
+  await db.insert(clearances).values({
+    studentId,
+    status: 'pending',
+    initiatedBy: 1,
+    initiatedAt: now,
+  });
+
+  const created = await db.select().from(clearances).where(eq(clearances.studentId, studentId)).limit(1);
+  return created[0];
 }

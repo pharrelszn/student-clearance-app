@@ -185,9 +185,9 @@ export default function ClearanceDetail() {
                   <CardTitle>Finance Department</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {clearance.financeChecks && clearance.financeChecks.length > 0 ? (
+                  {clearance.finance ? (
                     <div className="space-y-4">
-                      {clearance.financeChecks.map((check) => (
+                      {(clearance.finance ? [clearance.finance] : []).map((check) => (
                         <div key={check.id} className="border-b border-border pb-4 last:border-0">
                           <p className="font-semibold text-foreground">
                             Outstanding Balance: KES {check.outstandingBalance}
@@ -213,9 +213,9 @@ export default function ClearanceDetail() {
                   <CardTitle>Lab Department</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {clearance.labChecks && clearance.labChecks.length > 0 ? (
+                  {clearance.lab ? (
                     <div className="space-y-4">
-                      {clearance.labChecks.map((check) => (
+                      {(clearance.lab ? [clearance.lab] : []).map((check) => (
                         <div key={check.id} className="border-b border-border pb-4 last:border-0">
                           <p className="font-semibold text-foreground">
                             {check.equipmentName}
@@ -244,9 +244,9 @@ export default function ClearanceDetail() {
                   <CardTitle>Sports Department</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {clearance.sportsChecks && clearance.sportsChecks.length > 0 ? (
+                  {clearance.sports ? (
                     <div className="space-y-4">
-                      {clearance.sportsChecks.map((check) => (
+                      {(clearance.sports ? [clearance.sports] : []).map((check) => (
                         <div key={check.id} className="border-b border-border pb-4 last:border-0">
                           <p className="font-semibold text-foreground">
                             {check.equipmentName}
@@ -276,9 +276,9 @@ export default function ClearanceDetail() {
                   <CardTitle>Classroom Department</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {clearance.classroomChecks && clearance.classroomChecks.length > 0 ? (
+                  {clearance.classroom ? (
                     <div className="space-y-4">
-                      {clearance.classroomChecks.map((check) => (
+                      {(clearance.classroom ? [clearance.classroom] : []).map((check) => (
                         <div key={check.id} className="border-b border-border pb-4 last:border-0">
                           <p className="font-semibold text-foreground">
                             {check.itemName}
@@ -307,9 +307,9 @@ export default function ClearanceDetail() {
                   <CardTitle>Dormitory Department</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {clearance.dormChecks && clearance.dormChecks.length > 0 ? (
+                  {clearance.dorm ? (
                     <div className="space-y-4">
-                      {clearance.dormChecks.map((check) => (
+                      {(clearance.dorm as any).map?.((check: any) => (
                         <div key={check.id} className="border-b border-border pb-4 last:border-0">
                           <p className="font-semibold text-foreground">
                             {check.itemName}

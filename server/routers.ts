@@ -9,10 +9,13 @@ import {
   getClearanceWithDetails,
   getClearanceStatusSummary,
   getDb,
-  getUserById,
   getAdminConfig,
   updateAdminConfig,
   registerStudentWithDepartments,
+  getStudentById,
+  getAllStudents,
+  createStudent,
+  deleteStudent,
 } from "./db";
 import {
   clearances,
@@ -162,7 +165,7 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
 
-        const clearance = await getOrCreateClearance(input.studentId, ctx.user.id);
+        const clearance = await getOrCreateClearance(input.studentId);
         if (!clearance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create clearance" });
 
         return clearance;

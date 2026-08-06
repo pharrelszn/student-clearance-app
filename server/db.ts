@@ -349,16 +349,19 @@ export async function registerStudentWithDepartments(input: {
 
   try {
     // 1. Create student
-    const studentResult = await db.insert(students).values({
+    const studentValues: any = {
       studentId: input.studentId,
       name: input.name,
-      email: input.email,
-      phone: input.phone,
       program: input.program,
-      yearOfStudy: input.yearOfStudy,
       graduationYear: input.graduationYear,
-      admissionNumber: input.admissionNumber,
-    });
+    };
+    
+    if (input.email) studentValues.email = input.email;
+    if (input.phone) studentValues.phone = input.phone;
+    if (input.yearOfStudy) studentValues.yearOfStudy = input.yearOfStudy;
+    if (input.admissionNumber) studentValues.admissionNumber = input.admissionNumber;
+    
+    const studentResult = await db.insert(students).values(studentValues);
 
     const newStudentId = (studentResult as any).insertId;
 

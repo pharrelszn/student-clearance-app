@@ -18,6 +18,16 @@ export default function ClearanceDetail() {
     { enabled: clearanceId > 0 }
   );
 
+  const deleteStudentMutation = trpc.student.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Student data deleted successfully");
+      setTimeout(() => setLocation("/"), 1500);
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete: ${error.message}`);
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -93,14 +103,17 @@ export default function ClearanceDetail() {
             <Button
               onClick={() => {
                 if (confirm("Are you sure you want to delete this student's clearance data? This action cannot be undone.")) {
-                  toast.info("Delete functionality coming soon - use Database UI to remove records");
+                  if (clearance?.studentId) {
+                    deleteStudentMutation.mutate({ studentId: clearance.studentId });
+                  }
                 }
               }}
               variant="destructive"
               className="gap-2"
+              disabled={deleteStudentMutation.isPending}
             >
               <Trash2 className="w-4 h-4" />
-              Delete Student Data
+              {deleteStudentMutation.isPending ? "Deleting..." : "Delete Student Data"}
             </Button>
           </div>
         )}

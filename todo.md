@@ -47,8 +47,14 @@
 - [x] Added departmentSignOffs creation to registerStudentWithDepartments
 - [x] Fixed updateAdminConfig to return config object
 - [x] Added missing React imports to StudentRegistration
-- [ ] End-to-end test: Student registration form
-- [ ] End-to-end test: New student appears on dashboard
-- [ ] End-to-end test: Delete student functionality
-- [ ] End-to-end test: Clearance approval workflow
+- [x] Student registration form works end-to-end
+
+## Library Management Implementation
+- [ ] Add library_books table to database schema
+- [ ] Update registration form to include Library section with "Add Lost Book" functionality
+- [ ] Implement backend procedures for creating/updating library books
+- [ ] Update clearance detail page to display individual books
+- [ ] Implement individual book approval workflow
+- [ ] Implement Library clearance status logic (cleared when all books approved)
+- [ ] Test Library data persistence and approval workflow
 - [ ] Final checkpoint and deployment

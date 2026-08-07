@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, students, clearances, financeChecks, labChecks, sportsChecks, classroomChecks, dormChecks, adminConfigs, departmentSignOffs } from "../drizzle/schema";
+import { InsertUser, users, students, clearances, financeChecks, labChecks, sportsChecks, classroomChecks, dormChecks, adminConfigs, departmentSignOffs, libraryBooks, ictChecks, medicalChecks, registrarChecks } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -152,11 +152,16 @@ export async function deleteStudent(studentId: number) {
   const clearanceRecords = await db.select().from(clearances).where(eq(clearances.studentId, studentId));
   
   for (const clearance of clearanceRecords) {
+    await db.delete(departmentSignOffs).where(eq(departmentSignOffs.clearanceId, clearance.id));
     await db.delete(financeChecks).where(eq(financeChecks.clearanceId, clearance.id));
     await db.delete(labChecks).where(eq(labChecks.clearanceId, clearance.id));
     await db.delete(sportsChecks).where(eq(sportsChecks.clearanceId, clearance.id));
     await db.delete(classroomChecks).where(eq(classroomChecks.clearanceId, clearance.id));
     await db.delete(dormChecks).where(eq(dormChecks.clearanceId, clearance.id));
+    await db.delete(libraryBooks).where(eq(libraryBooks.clearanceId, clearance.id));
+    await db.delete(ictChecks).where(eq(ictChecks.clearanceId, clearance.id));
+    await db.delete(medicalChecks).where(eq(medicalChecks.clearanceId, clearance.id));
+    await db.delete(registrarChecks).where(eq(registrarChecks.clearanceId, clearance.id));
   }
 
   await db.delete(clearances).where(eq(clearances.studentId, studentId));
@@ -176,6 +181,10 @@ export async function getClearanceWithDetails(clearanceId: number) {
   const sportsData = await db.select().from(sportsChecks).where(eq(sportsChecks.clearanceId, clearanceId));
   const classroomData = await db.select().from(classroomChecks).where(eq(classroomChecks.clearanceId, clearanceId));
   const dormData = await db.select().from(dormChecks).where(eq(dormChecks.clearanceId, clearanceId));
+  const libraryData = await db.select().from(libraryBooks).where(eq(libraryBooks.clearanceId, clearanceId));
+  const ictData = await db.select().from(ictChecks).where(eq(ictChecks.clearanceId, clearanceId));
+  const medicalData = await db.select().from(medicalChecks).where(eq(medicalChecks.clearanceId, clearanceId));
+  const registrarData = await db.select().from(registrarChecks).where(eq(registrarChecks.clearanceId, clearanceId));
   const signOffsData = await db.select().from(departmentSignOffs).where(eq(departmentSignOffs.clearanceId, clearanceId));
 
   return {
@@ -185,6 +194,10 @@ export async function getClearanceWithDetails(clearanceId: number) {
     sports: sportsData.length > 0 ? sportsData[0] : null,
     classroom: classroomData.length > 0 ? classroomData[0] : null,
     dorm: dormData.length > 0 ? dormData[0] : null,
+    library: libraryData,
+    ict: ictData.length > 0 ? ictData[0] : null,
+    medical: medicalData.length > 0 ? medicalData[0] : null,
+    registrar: registrarData.length > 0 ? registrarData[0] : null,
     departmentSignOffs: signOffsData,
   };
 }

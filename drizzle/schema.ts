@@ -184,6 +184,76 @@ export type DormCheck = typeof dormChecks.$inferSelect;
 export type InsertDormCheck = typeof dormChecks.$inferInsert;
 
 /**
+ * Library books table - tracks individual lost/damaged books
+ */
+export const libraryBooks = mysqlTable("libraryBooks", {
+  id: int("id").autoincrement().primaryKey(),
+  clearanceId: int("clearanceId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  bookNumber: varchar("bookNumber", { length: 64 }).notNull(),
+  isbn: varchar("isbn", { length: 20 }),
+  author: varchar("author", { length: 255 }),
+  fine: decimal("fine", { precision: 10, scale: 2 }),
+  status: mysqlEnum("status", ["lost", "damaged", "pending", "resolved"]).default("pending").notNull(),
+  approvedAt: timestamp("approvedAt"),
+  approvedBy: int("approvedBy"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type LibraryBook = typeof libraryBooks.$inferSelect;
+export type InsertLibraryBook = typeof libraryBooks.$inferInsert;
+
+/**
+ * ICT checks table - tracks ICT equipment and issues
+ */
+export const ictChecks = mysqlTable("ictChecks", {
+  id: int("id").autoincrement().primaryKey(),
+  clearanceId: int("clearanceId").notNull(),
+  equipmentType: varchar("equipmentType", { length: 255 }).notNull(),
+  equipmentDescription: varchar("equipmentDescription", { length: 255 }),
+  status: mysqlEnum("status", ["pending", "returned", "damaged", "resolved"]).default("pending").notNull(),
+  damageAmount: decimal("damageAmount", { precision: 10, scale: 2 }),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type IctCheck = typeof ictChecks.$inferSelect;
+export type InsertIctCheck = typeof ictChecks.$inferInsert;
+
+/**
+ * Medical checks table - tracks medical clearance
+ */
+export const medicalChecks = mysqlTable("medicalChecks", {
+  id: int("id").autoincrement().primaryKey(),
+  clearanceId: int("clearanceId").notNull(),
+  status: mysqlEnum("status", ["pending", "cleared", "flagged"]).default("pending").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type MedicalCheck = typeof medicalChecks.$inferSelect;
+export type InsertMedicalCheck = typeof medicalChecks.$inferInsert;
+
+/**
+ * Registrar checks table - tracks registrar clearance
+ */
+export const registrarChecks = mysqlTable("registrarChecks", {
+  id: int("id").autoincrement().primaryKey(),
+  clearanceId: int("clearanceId").notNull(),
+  status: mysqlEnum("status", ["pending", "cleared", "flagged"]).default("pending").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type RegistrarCheck = typeof registrarChecks.$inferSelect;
+export type InsertRegistrarCheck = typeof registrarChecks.$inferInsert;
+
+/**
  * Relations
  */
 export const clearancesRelations = relations(clearances, ({ one, many }) => ({
@@ -197,6 +267,10 @@ export const clearancesRelations = relations(clearances, ({ one, many }) => ({
   sportsChecks: many(sportsChecks),
   classroomChecks: many(classroomChecks),
   dormChecks: many(dormChecks),
+  libraryBooks: many(libraryBooks),
+  ictChecks: many(ictChecks),
+  medicalChecks: many(medicalChecks),
+  registrarChecks: many(registrarChecks),
 }));
 
 export const departmentSignOffsRelations = relations(departmentSignOffs, ({ one }) => ({
@@ -237,6 +311,34 @@ export const classroomChecksRelations = relations(classroomChecks, ({ one }) => 
 export const dormChecksRelations = relations(dormChecks, ({ one }) => ({
   clearance: one(clearances, {
     fields: [dormChecks.clearanceId],
+    references: [clearances.id],
+  }),
+}));
+
+export const libraryBooksRelations = relations(libraryBooks, ({ one }) => ({
+  clearance: one(clearances, {
+    fields: [libraryBooks.clearanceId],
+    references: [clearances.id],
+  }),
+}));
+
+export const ictChecksRelations = relations(ictChecks, ({ one }) => ({
+  clearance: one(clearances, {
+    fields: [ictChecks.clearanceId],
+    references: [clearances.id],
+  }),
+}));
+
+export const medicalChecksRelations = relations(medicalChecks, ({ one }) => ({
+  clearance: one(clearances, {
+    fields: [medicalChecks.clearanceId],
+    references: [clearances.id],
+  }),
+}));
+
+export const registrarChecksRelations = relations(registrarChecks, ({ one }) => ({
+  clearance: one(clearances, {
+    fields: [registrarChecks.clearanceId],
     references: [clearances.id],
   }),
 }));

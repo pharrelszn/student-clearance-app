@@ -43,6 +43,13 @@
       "when": 1786099303374,
       "tag": "0005_regular_ultimates",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1786099455760,
+      "tag": "0006_aberrant_kid_colt",
+      "breakpoints": true
     }
   ]
 }

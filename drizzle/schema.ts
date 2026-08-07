@@ -88,7 +88,7 @@ export type InsertClearance = typeof clearances.$inferInsert;
 export const departmentSignOffs = mysqlTable("departmentSignOffs", {
   id: int("id").autoincrement().primaryKey(),
   clearanceId: int("clearanceId").notNull(),
-  department: mysqlEnum("department", ["finance", "lab", "sports", "classroom", "dorm"]).notNull(),
+  department: mysqlEnum("department", ["finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical", "registrar"]).notNull(),
   status: mysqlEnum("status", ["pending", "approved", "flagged"]).default("pending").notNull(),
   signedOffBy: int("signedOffBy"),
   signedOffAt: timestamp("signedOffAt"),

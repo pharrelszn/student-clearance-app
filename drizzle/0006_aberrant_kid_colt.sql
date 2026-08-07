@@ -1,0 +1,1 @@
+ALTER TABLE `departmentSignOffs` MODIFY COLUMN `department` enum('finance','lab','sports','classroom','dorm','library','ict','medical','registrar') NOT NULL;

@@ -27,6 +27,7 @@ import {
   dormChecks,
   students,
   departmentSignOffs as deptSignOffs,
+  libraryBooks,
 } from "../drizzle/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -227,7 +228,7 @@ export const appRouter = router({
       .input(
         z.object({
           clearanceId: z.number(),
-          department: z.enum(["finance", "lab", "sports", "classroom", "dorm"]),
+          department: z.enum(["finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical", "registrar"]),
           notes: z.string().optional(),
         })
       )
@@ -528,6 +529,92 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const config = await updateAdminConfig(input);
         return config || { enableSports: false, enableDorm: false, enableLab: false, enableClassroom: false, enableFinance: false };
+      }),
+  }),
+
+  // Library book management
+  libraryBook: router({
+    approveBook: protectedProcedure
+      .input(
+        z.object({
+          bookId: z.number(),
+          clearanceId: z.number(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        const now = new Date();
+
+        // Update book status to resolved
+        await db
+          .update(libraryBooks)
+          .set({
+            status: "resolved",
+            approvedAt: now,
+            approvedBy: ctx.user.id,
+            updatedAt: now,
+          })
+          .where(eq(libraryBooks.id, input.bookId));
+
+        // Check if all books for this clearance are resolved
+        const allBooks = await db
+          .select()
+          .from(libraryBooks)
+          .where(eq(libraryBooks.clearanceId, input.clearanceId));
+
+        const allResolved = allBooks.every((b) => b.status === "resolved");
+
+        if (allResolved) {
+          // Update library department sign-off to approved
+          await db
+            .update(departmentSignOffs)
+            .set({
+              status: "approved",
+              signedOffBy: ctx.user.id,
+              signedOffAt: now,
+              updatedAt: now,
+            })
+            .where(
+              sql`${departmentSignOffs.clearanceId} = ${input.clearanceId} AND ${departmentSignOffs.department} = 'library'`
+            );
+
+          // Check if all departments are approved
+          const allSignOffs = await db
+            .select()
+            .from(departmentSignOffs)
+            .where(eq(departmentSignOffs.clearanceId, input.clearanceId));
+
+          const allApproved = allSignOffs.every((s) => s.status === "approved");
+
+          if (allApproved) {
+            await db
+              .update(clearances)
+              .set({
+                status: "completed",
+                completedAt: now,
+                updatedAt: now,
+              })
+              .where(eq(clearances.id, input.clearanceId));
+          }
+        }
+
+        return { success: true, allResolved };
+      }),
+
+    getBooksForClearance: protectedProcedure
+      .input(z.object({ clearanceId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+
+        return await db
+          .select()
+          .from(libraryBooks)
+          .where(eq(libraryBooks.clearanceId, input.clearanceId));
       }),
   }),
 });

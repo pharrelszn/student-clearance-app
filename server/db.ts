@@ -255,6 +255,10 @@ export async function registerStudentWithDepartments(input: {
     sports?: { equipmentName: string; description?: string };
     classroom?: { itemName: string; damageAmount: string };
     dorm?: { itemName: string; damageAmount: string };
+    library?: { books: Array<{ title: string; bookNumber: string; isbn?: string; author?: string; fine?: string }> };
+    ict?: { equipmentType: string; equipmentDescription?: string; damageAmount?: string };
+    medical?: { notes?: string };
+    registrar?: { notes?: string };
   };
 }): Promise<{ studentId: number; clearanceId: number }> {
   const db = await getDb();
@@ -293,21 +297,14 @@ export async function registerStudentWithDepartments(input: {
     }
     const newClearanceId = clearanceData[0].id;
 
-    // 3. Create finance check (mandatory)
-    await db.insert(financeChecks).values({
-      clearanceId: newClearanceId,
-      outstandingBalance: input.finance.outstandingBalance as any,
-      description: input.finance.description || null,
-    });
-
-    // 4. Create departmentSignOffs for Finance (mandatory)
+    // 3. Create departmentSignOffs for Finance (mandatory)
     await db.insert(departmentSignOffs).values({
       clearanceId: newClearanceId,
       department: 'finance',
       status: 'pending',
     });
 
-    // 5. Create finance check (mandatory)
+    // 4. Create finance check (mandatory)
     await db.insert(financeChecks).values({
       clearanceId: newClearanceId,
       outstandingBalance: input.finance.outstandingBalance as any,
@@ -367,6 +364,63 @@ export async function registerStudentWithDepartments(input: {
         itemName: input.departments.dorm.itemName,
         damageAmount: input.departments.dorm.damageAmount as any,
         description: null,
+      });
+    }
+
+    if (input.departments?.library) {
+      await db.insert(departmentSignOffs).values({
+        clearanceId: newClearanceId,
+        department: 'library',
+        status: 'pending',
+      });
+      for (const book of input.departments.library.books) {
+        await db.insert(libraryBooks).values({
+          clearanceId: newClearanceId,
+          title: book.title,
+          bookNumber: book.bookNumber,
+          isbn: book.isbn || null,
+          author: book.author || null,
+          fine: book.fine ? (book.fine as any) : null,
+          status: 'pending',
+        });
+      }
+    }
+
+    if (input.departments?.ict) {
+      await db.insert(departmentSignOffs).values({
+        clearanceId: newClearanceId,
+        department: 'ict',
+        status: 'pending',
+      });
+      await db.insert(ictChecks).values({
+        clearanceId: newClearanceId,
+        equipmentType: input.departments.ict.equipmentType,
+        equipmentDescription: input.departments.ict.equipmentDescription || null,
+        damageAmount: input.departments.ict.damageAmount ? (input.departments.ict.damageAmount as any) : null,
+      });
+    }
+
+    if (input.departments?.medical) {
+      await db.insert(departmentSignOffs).values({
+        clearanceId: newClearanceId,
+        department: 'medical',
+        status: 'pending',
+      });
+      await db.insert(medicalChecks).values({
+        clearanceId: newClearanceId,
+        notes: input.departments.medical.notes || null,
+      });
+    }
+
+    if (input.departments?.registrar) {
+      await db.insert(departmentSignOffs).values({
+        clearanceId: newClearanceId,
+        department: 'registrar',
+        status: 'pending',
+      });
+      await db.insert(registrarChecks).values({
+        clearanceId: newClearanceId,
+        notes: input.departments.registrar.notes || null,
       });
     }
 

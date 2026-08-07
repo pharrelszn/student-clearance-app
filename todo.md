@@ -50,7 +50,8 @@
 - [x] Student registration form works end-to-end
 
 ## Library Management Implementation
-- [ ] Add library_books table to database schema
+- [x] Add library_books table to database schema
+- [x] Add ictChecks, medicalChecks, registrarChecks tables
 - [ ] Update registration form to include Library section with "Add Lost Book" functionality
 - [ ] Implement backend procedures for creating/updating library books
 - [ ] Update clearance detail page to display individual books

@@ -7,13 +7,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CheckCircle2, AlertCircle, Clock, ArrowLeft, FileText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import DepartmentSignOff from "@/components/DepartmentSignOff";
+import LibraryBooks from "@/components/LibraryBooks";
 
 export default function ClearanceDetail() {
   const params = useParams();
   const clearanceId = parseInt(params?.id || "0");
   const [, setLocation] = useLocation();
 
-  const { data: clearance, isLoading } = trpc.clearance.getDetails.useQuery(
+  const { data: clearance, isLoading, refetch } = trpc.clearance.getDetails.useQuery(
     { clearanceId },
     { enabled: clearanceId > 0 }
   );
@@ -184,12 +185,13 @@ export default function ClearanceDetail() {
         <div className="mt-12">
           <h2 className="text-editorial-heading text-2xl mb-6">Department Details</h2>
           <Tabs defaultValue="finance" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 border-b border-border">
+            <TabsList className="grid w-full grid-cols-6 border-b border-border">
               <TabsTrigger value="finance">Finance</TabsTrigger>
               <TabsTrigger value="lab">Lab</TabsTrigger>
               <TabsTrigger value="sports">Sports</TabsTrigger>
               <TabsTrigger value="classroom">Classroom</TabsTrigger>
               <TabsTrigger value="dorm">Dorm</TabsTrigger>
+              <TabsTrigger value="library">Library</TabsTrigger>
             </TabsList>
 
             <TabsContent value="finance" className="mt-6">
@@ -343,6 +345,10 @@ export default function ClearanceDetail() {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="library" className="mt-6">
+              <LibraryBooks clearanceId={clearanceId} onBooksUpdate={refetch} />
             </TabsContent>
           </Tabs>
         </div>

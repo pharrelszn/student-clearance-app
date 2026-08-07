@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 
 export default function StudentRegistration() {
   const [, setLocation] = useLocation();
@@ -35,6 +35,7 @@ export default function StudentRegistration() {
     sports: false,
     classroom: false,
     dorm: false,
+    library: false,
   });
 
   // Department data
@@ -57,6 +58,18 @@ export default function StudentRegistration() {
   const [dorm, setDorm] = useState({
     itemName: "",
     damageAmount: "",
+  });
+
+  const [library, setLibrary] = useState({
+    books: [] as Array<{ title: string; bookNumber: string; isbn?: string; author?: string; fine?: string }>,
+  });
+
+  const [newBook, setNewBook] = useState({
+    title: "",
+    bookNumber: "",
+    isbn: "",
+    author: "",
+    fine: "",
   });
 
   const registerMutation = trpc.student.registerWithDepartments.useMutation({
@@ -103,12 +116,18 @@ export default function StudentRegistration() {
       return;
     }
 
+    if (enabledDepts.library && library.books.length === 0) {
+      toast.error("Add at least one book for Library department");
+      return;
+    }
+
     // Build departments object
     const departments: any = {};
     if (enabledDepts.lab) departments.lab = lab;
     if (enabledDepts.sports) departments.sports = sports;
     if (enabledDepts.classroom) departments.classroom = classroom;
     if (enabledDepts.dorm) departments.dorm = dorm;
+    if (enabledDepts.library) departments.library = library;
 
     registerMutation.mutate({
       studentId: basicInfo.studentId,
@@ -414,6 +433,133 @@ export default function StudentRegistration() {
                         onChange={(e) => setDorm({ ...dorm, damageAmount: e.target.value })}
                       />
                     </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Library */}
+              <div className="border border-border rounded-lg p-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <Checkbox
+                    checked={enabledDepts.library}
+                    onCheckedChange={(checked) =>
+                      setEnabledDepts({ ...enabledDepts, library: checked as boolean })
+                    }
+                    id="library-dept"
+                  />
+                  <label htmlFor="library-dept" className="font-medium cursor-pointer">
+                    Library Department (Lost/Damaged Books)
+                  </label>
+                </div>
+
+                {enabledDepts.library && (
+                  <div className="space-y-4 ml-6">
+                    {/* Add Book Form */}
+                    <div className="bg-muted p-3 rounded-lg">
+                      <h4 className="font-semibold mb-3">Add Lost/Damaged Book</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Book Title *</label>
+                          <Input
+                            placeholder="e.g., Advanced Mathematics"
+                            value={newBook.title}
+                            onChange={(e) => setNewBook({ ...newBook, title: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Book Number *</label>
+                          <Input
+                            placeholder="e.g., LIB-2024-001"
+                            value={newBook.bookNumber}
+                            onChange={(e) => setNewBook({ ...newBook, bookNumber: e.target.value })}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">ISBN</label>
+                            <Input
+                              placeholder="e.g., 978-0-123456"
+                              value={newBook.isbn}
+                              onChange={(e) => setNewBook({ ...newBook, isbn: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Author</label>
+                            <Input
+                              placeholder="e.g., John Doe"
+                              value={newBook.author}
+                              onChange={(e) => setNewBook({ ...newBook, author: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Fine/Replacement Cost</label>
+                          <Input
+                            placeholder="e.g., 5000"
+                            value={newBook.fine}
+                            onChange={(e) => setNewBook({ ...newBook, fine: e.target.value })}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            if (!newBook.title || !newBook.bookNumber) {
+                              toast.error("Book title and number are required");
+                              return;
+                            }
+                            setLibrary({
+                              books: [
+                                ...library.books,
+                                {
+                                  title: newBook.title,
+                                  bookNumber: newBook.bookNumber,
+                                  isbn: newBook.isbn || undefined,
+                                  author: newBook.author || undefined,
+                                  fine: newBook.fine || undefined,
+                                },
+                              ],
+                            });
+                            setNewBook({ title: "", bookNumber: "", isbn: "", author: "", fine: "" });
+                            toast.success("Book added");
+                          }}
+                          className="w-full"
+                          variant="outline"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Book
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Books List */}
+                    {library.books.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-semibold">Books ({library.books.length})</h4>
+                        {library.books.map((book, idx) => (
+                          <div key={idx} className="bg-muted p-3 rounded-lg flex justify-between items-start">
+                            <div className="flex-1">
+                              <p className="font-medium">{book.title}</p>
+                              <p className="text-sm text-muted-foreground">#{book.bookNumber}</p>
+                              {book.author && <p className="text-sm text-muted-foreground">By: {book.author}</p>}
+                              {book.fine && <p className="text-sm text-muted-foreground">Fine: KES {book.fine}</p>}
+                            </div>
+                            <Button
+                              type="button"
+                              onClick={() => {
+                                setLibrary({
+                                  books: library.books.filter((_, i) => i !== idx),
+                                });
+                                toast.success("Book removed");
+                              }}
+                              variant="ghost"
+                              size="sm"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

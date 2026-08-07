@@ -52,10 +52,11 @@
 ## Library Management Implementation
 - [x] Add library_books table to database schema
 - [x] Add ictChecks, medicalChecks, registrarChecks tables
-- [ ] Update registration form to include Library section with "Add Lost Book" functionality
-- [ ] Implement backend procedures for creating/updating library books
-- [ ] Update clearance detail page to display individual books
-- [ ] Implement individual book approval workflow
-- [ ] Implement Library clearance status logic (cleared when all books approved)
+- [x] Implement backend procedures for creating/updating library books
+- [x] Implement individual book approval workflow (libraryBook.approveBook)
+- [x] Implement Library clearance status logic (cleared when all books approved)
+- [x] Update registration form to include Library section with "Add Lost Book" functionality
+- [x] Update clearance detail page to display individual books
+- [x] Harden approveBook with validation (verify book exists and belongs to clearance)
 - [ ] Test Library data persistence and approval workflow
 - [ ] Final checkpoint and deployment

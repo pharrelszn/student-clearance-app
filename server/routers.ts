@@ -123,6 +123,26 @@ export const appRouter = router({
             itemName: z.string(),
             damageAmount: z.string(),
           }).optional(),
+          library: z.object({
+            books: z.array(z.object({
+              title: z.string(),
+              bookNumber: z.string(),
+              isbn: z.string().optional(),
+              author: z.string().optional(),
+              fine: z.string().optional(),
+            })),
+          }).optional(),
+          ict: z.object({
+            equipmentType: z.string(),
+            equipmentDescription: z.string().optional(),
+            damageAmount: z.string().optional(),
+          }).optional(),
+          medical: z.object({
+            notes: z.string().optional(),
+          }).optional(),
+          registrar: z.object({
+            notes: z.string().optional(),
+          }).optional(),
         }).optional(),
       }))
       .mutation(async ({ input }) => {
@@ -547,6 +567,22 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
+        // Verify the book exists and belongs to the specified clearance
+        const bookData = await db
+          .select()
+          .from(libraryBooks)
+          .where(eq(libraryBooks.id, input.bookId))
+          .limit(1);
+
+        if (!bookData || bookData.length === 0) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Book not found" });
+        }
+
+        const book = bookData[0];
+        if (book.clearanceId !== input.clearanceId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Book does not belong to this clearance" });
+        }
+
         const now = new Date();
 
         // Update book status to resolved
@@ -565,6 +601,10 @@ export const appRouter = router({
           .select()
           .from(libraryBooks)
           .where(eq(libraryBooks.clearanceId, input.clearanceId));
+
+        if (allBooks.length === 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "No books found for this clearance" });
+        }
 
         const allResolved = allBooks.every((b) => b.status === "resolved");
 

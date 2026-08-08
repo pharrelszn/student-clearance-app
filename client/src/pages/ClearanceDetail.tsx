@@ -324,21 +324,19 @@ export default function ClearanceDetail() {
                 <CardContent>
                   {clearance.dorm ? (
                     <div className="space-y-4">
-                      {(clearance.dorm as any).map?.((check: any) => (
-                        <div key={check.id} className="border-b border-border pb-4 last:border-0">
-                          <p className="font-semibold text-foreground">
-                            {check.itemName}
-                          </p>
+                      <div className="border-b border-border pb-4">
+                        <p className="font-semibold text-foreground">
+                          {(clearance.dorm as any).itemName}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Damage Amount: KES {(clearance.dorm as any).damageAmount}
+                        </p>
+                        {(clearance.dorm as any).description && (
                           <p className="text-sm text-muted-foreground">
-                            Damage Amount: KES {check.damageAmount}
+                            {(clearance.dorm as any).description}
                           </p>
-                          {check.description && (
-                            <p className="text-sm text-muted-foreground">
-                              {check.description}
-                            </p>
-                          )}
-                        </div>
-                      ))}
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <p className="text-muted-foreground">No dorm checks recorded</p>

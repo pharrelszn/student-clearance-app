@@ -448,8 +448,16 @@ export async function searchStudents(query: string) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   
+  if (!query) return [];
+  
+  const { like, or } = require('drizzle-orm');
+  
   return await db.select().from(students).where(
-    query ? eq(students.studentId, query) : undefined
+    or(
+      like(students.name, `%${query}%`),
+      like(students.studentId, `%${query}%`),
+      like(students.admissionNumber, `%${query}%`)
+    )
   ).limit(10);
 }
 

@@ -122,19 +122,30 @@ export async function createStudent(data: {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
 
+  // Check if student already exists
+  const existing = await db.select().from(students).where(eq(students.studentId, data.studentId)).limit(1);
+  if (existing && existing.length > 0) {
+    throw new Error(`Student with ID ${data.studentId} already exists`);
+  }
+
   const insertData: any = {
-    studentId: data.studentId,
-    name: data.name,
-    program: data.program,
-    graduationYear: data.graduationYear,
+    studentId: String(data.studentId),
+    name: String(data.name),
+    program: String(data.program),
+    graduationYear: Number(data.graduationYear),
   };
 
-  if (data.email) insertData.email = data.email;
-  if (data.phone) insertData.phone = data.phone;
-  if (data.yearOfStudy) insertData.yearOfStudy = data.yearOfStudy;
-  if (data.admissionNumber) insertData.admissionNumber = data.admissionNumber;
+  if (data.email) insertData.email = String(data.email);
+  if (data.phone) insertData.phone = String(data.phone);
+  if (data.yearOfStudy !== undefined && data.yearOfStudy !== null) insertData.yearOfStudy = Number(data.yearOfStudy);
+  if (data.admissionNumber) insertData.admissionNumber = String(data.admissionNumber);
 
-  await db.insert(students).values(insertData);
+  try {
+    await db.insert(students).values(insertData);
+  } catch (error: any) {
+    console.error("[Database] Student insert error:", error.message);
+    throw new Error(`Failed to insert student: ${error.message}`);
+  }
   
   // Retrieve the inserted student
   const result = await db.select().from(students).where(eq(students.studentId, data.studentId)).limit(1);

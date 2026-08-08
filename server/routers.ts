@@ -150,6 +150,50 @@ export const appRouter = router({
         return { success: true, studentId: result.studentId, clearanceId: result.clearanceId };
       }),
 
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().min(1),
+        studentId: z.string().min(1),
+        email: z.string().email().nullable(),
+        phone: z.string().nullable(),
+        program: z.string().min(1),
+        yearOfStudy: z.number().nullable(),
+        graduationYear: z.number().min(2020).max(2100),
+        admissionNumber: z.string().nullable(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        // Verify student exists
+        const existingStudent = await db.select().from(students).where(eq(students.id, input.id)).limit(1);
+        if (!existingStudent || existingStudent.length === 0) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Student not found" });
+        }
+
+        // Check for duplicate studentId (if changed)
+        if (existingStudent[0].studentId !== input.studentId) {
+          const duplicate = await db.select().from(students).where(eq(students.studentId, input.studentId)).limit(1);
+          if (duplicate && duplicate.length > 0) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Student ID already exists" });
+          }
+        }
+
+        await db.update(students).set({
+          name: input.name,
+          studentId: input.studentId,
+          email: input.email,
+          phone: input.phone,
+          program: input.program,
+          yearOfStudy: input.yearOfStudy,
+          graduationYear: input.graduationYear,
+          admissionNumber: input.admissionNumber,
+        }).where(eq(students.id, input.id));
+
+        return { success: true, message: "Student updated successfully" };
+      }),
+
     delete: protectedProcedure
       .input(z.object({ studentId: z.number() }))
       .mutation(async ({ input }) => {

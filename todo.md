@@ -60,3 +60,11 @@
 - [x] Harden approveBook with validation (verify book exists and belongs to clearance)
 - [x] Test Library data persistence and approval workflow
 - [x] Final checkpoint and deployment (version: a6c6c42e)
+
+## Edit Student Feature (Current)
+- [x] Add Edit button to StudentSearch page
+- [x] Create EditStudent modal/form component
+- [x] Add student.update tRPC procedure with validation
+- [x] Harden update with duplicate studentId checking
+- [x] Test edit workflow end-to-end (TypeScript: 0 errors)
+- [x] Save checkpoint with Edit Student feature

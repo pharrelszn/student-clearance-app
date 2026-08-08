@@ -5,13 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useLocation } from "wouter";
-import { Search, ChevronRight } from "lucide-react";
+import { Search, ChevronRight, Edit2 } from "lucide-react";
 import { toast } from "sonner";
+import EditStudentModal from "@/components/EditStudentModal";
 
 export default function StudentSearch() {
   const [query, setQuery] = useState("");
   const [, setLocation] = useLocation();
-  const { data: results, isLoading } = trpc.student.search.useQuery(
+  const [editingStudent, setEditingStudent] = useState<any>(null);
+  const { data: results, isLoading, refetch } = trpc.student.search.useQuery(
     { query },
     { enabled: query.length > 0 }
   );
@@ -98,7 +100,27 @@ export default function StudentSearch() {
                           </p>
                         </div>
                       </div>
-                      <ChevronRight className="w-6 h-6 text-muted-foreground flex-shrink-0 ml-4" />
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingStudent(student);
+                          }}
+                          className="border-border hover:bg-white/50"
+                        >
+                          <Edit2 className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSelectStudent(student.id)}
+                        >
+                          <ChevronRight className="w-5 h-5" />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -113,6 +135,19 @@ export default function StudentSearch() {
           )}
         </div>
       </div>
+
+      {/* Edit Student Modal */}
+      {editingStudent && (
+        <EditStudentModal
+          student={editingStudent}
+          isOpen={!!editingStudent}
+          onClose={() => setEditingStudent(null)}
+          onSuccess={() => {
+            setEditingStudent(null);
+            refetch();
+          }}
+        />
+      )}
     </div>
   );
 }

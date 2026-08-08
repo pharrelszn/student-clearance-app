@@ -102,13 +102,13 @@ export default function StudentSearch() {
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                         <Button
-                          variant="outline"
+                          variant="default"
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditingStudent(student);
                           }}
-                          className="border-border hover:bg-white/50"
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
                         >
                           <Edit2 className="w-4 h-4 mr-1" />
                           Edit

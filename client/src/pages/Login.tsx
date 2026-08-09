@@ -4,67 +4,80 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Lock, AlertTriangle } from "lucide-react";
+import { Lock, AlertTriangle, Shield } from "lucide-react";
 
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
-const MASTER_PASSCODE = "kabianga2024"; // Default master passcode
+
+// Department passcodes and their roles
+const DEPARTMENT_PASSCODES: Record<string, { role: string; department: string }> = {
+  "superadminkabianga2026": { role: "super_admin", department: "Super Admin" },
+  "librarykabianga2026": { role: "library", department: "Library" },
+  "labictkabianga2026": { role: "lab", department: "Lab/ICT" },
+  "sportskabianga2026": { role: "sports", department: "Sports" },
+  "financekabianga2026": { role: "finance", department: "Finance" },
+  "dormkabianga2026": { role: "dorm", department: "Dorm/Hostel" },
+  "medicalkabianga2026": { role: "medical", department: "Medical" },
+  "registrarkabianga2026": { role: "registrar", department: "Registrar" },
+  "classroomkabianga2026": { role: "classroom", department: "Classroom" },
+  "ictkabianga2026": { role: "ict", department: "ICT" },
+};
 
 export default function Login() {
   const [, setLocation] = useLocation();
-  const [keyword, setKeyword] = useState("");
+  const [passcode, setPasscode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showMasterOption, setShowMasterOption] = useState(false);
-  const [masterPasscode, setMasterPasscode] = useState("");
 
   // Set up session timeout on component mount
   useEffect(() => {
     const setupSessionTimeout = () => {
       const timeout = setTimeout(() => {
-        sessionStorage.removeItem("portalKeyword");
+        sessionStorage.removeItem("userRole");
+        sessionStorage.removeItem("userDepartment");
         toast.error("Session expired. Please log in again.");
         setLocation("/login");
       }, SESSION_TIMEOUT);
 
-      // Clear timeout on cleanup
       return () => clearTimeout(timeout);
     };
 
-    const portalKeyword = sessionStorage.getItem("portalKeyword");
-    if (portalKeyword) {
+    const userRole = sessionStorage.getItem("userRole");
+    if (userRole) {
       setupSessionTimeout();
     }
   }, [setLocation]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!keyword.trim()) {
-      toast.error("Please enter the access keyword");
+
+    if (!passcode.trim()) {
+      toast.error("Please enter your department passcode");
       return;
     }
 
     setIsLoading(true);
     try {
-      // Get the correct keyword from localStorage (default is "admin")
-      const correctKeyword = localStorage.getItem("portalAccessKeyword") || "admin";
-      const masterPass = localStorage.getItem("masterPasscode") || MASTER_PASSCODE;
-      
-      if (keyword === correctKeyword || keyword === masterPass) {
-        // Store the keyword in session storage to indicate user is logged in
-        sessionStorage.setItem("portalKeyword", keyword);
-        
-        // Set up session timeout
-        setTimeout(() => {
-          sessionStorage.removeItem("portalKeyword");
-          toast.error("Session expired. Please log in again.");
-          setLocation("/login");
-        }, SESSION_TIMEOUT);
-        
-        toast.success("Access granted!");
-        setLocation("/");
-      } else {
-        toast.error("Invalid access keyword");
+      const credentials = DEPARTMENT_PASSCODES[passcode];
+
+      if (!credentials) {
+        toast.error("Invalid passcode. Please try again.");
+        setIsLoading(false);
+        return;
       }
+
+      // Store user role and department in session storage
+      sessionStorage.setItem("userRole", credentials.role);
+      sessionStorage.setItem("userDepartment", credentials.department);
+
+      // Set up session timeout
+      setTimeout(() => {
+        sessionStorage.removeItem("userRole");
+        sessionStorage.removeItem("userDepartment");
+        toast.error("Session expired. Please log in again.");
+        setLocation("/login");
+      }, SESSION_TIMEOUT);
+
+      toast.success(`Welcome, ${credentials.department}!`);
+      setLocation("/");
     } catch (error) {
       toast.error("Login failed");
     } finally {
@@ -82,7 +95,7 @@ export default function Login() {
           </div>
           <h1 className="text-editorial-heading mb-2">Clearance Portal</h1>
           <p className="text-editorial-subheading text-muted-foreground">
-            Access the student clearance system
+            Department-based access system
           </p>
         </div>
 
@@ -90,19 +103,19 @@ export default function Login() {
         <Card className="border-border glassmorphism">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Lock className="w-5 h-5" />
-              Portal Access
+              <Shield className="w-5 h-5" />
+              Department Access
             </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="text-sm font-medium">Access Keyword *</label>
+                <label className="text-sm font-medium">Department Passcode *</label>
                 <Input
                   type="password"
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
-                  placeholder="Enter the access keyword"
+                  value={passcode}
+                  onChange={(e) => setPasscode(e.target.value)}
+                  placeholder="Enter your department passcode"
                   className="mt-2 border-border"
                   disabled={isLoading}
                   autoFocus
@@ -118,52 +131,29 @@ export default function Login() {
               </Button>
 
               <p className="text-xs text-muted-foreground text-center mt-4">
-                Contact your administrator for the access keyword
+                Contact your administrator for your department passcode
               </p>
 
-              {/* Master Passcode Option */}
-              <button
-                type="button"
-                onClick={() => setShowMasterOption(!showMasterOption)}
-                className="text-xs text-blue-600 hover:text-blue-800 mt-2 w-full text-center transition-smooth"
-              >
-                {showMasterOption ? "Hide" : "Emergency access?"}
-              </button>
-
-              {showMasterOption && (
-                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg space-y-3 animate-in fade-in slide-in-from-top-2">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-red-900">
-                      <strong>Master Passcode:</strong> Use only in case of emergency or if the primary keyword is forgotten.
-                    </p>
-                  </div>
-                  <Input
-                    type="password"
-                    value={masterPasscode}
-                    onChange={(e) => setMasterPasscode(e.target.value)}
-                    placeholder="Enter master passcode"
-                    className="border-red-300 text-xs"
-                    disabled={isLoading}
-                  />
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      setKeyword(masterPasscode);
-                      setShowMasterOption(false);
-                    }}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white text-xs transition-smooth"
-                    disabled={isLoading || !masterPasscode.trim()}
-                  >
-                    Use Master Passcode
-                  </Button>
+              {/* Available Departments Info */}
+              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                <p className="text-xs font-semibold text-blue-900 mb-2">Available Departments:</p>
+                <div className="text-xs text-blue-800 space-y-1">
+                  <p>• Super Admin</p>
+                  <p>• Finance</p>
+                  <p>• Library</p>
+                  <p>• Lab/ICT</p>
+                  <p>• Sports</p>
+                  <p>• Dorm/Hostel</p>
+                  <p>• Medical</p>
+                  <p>• Registrar</p>
+                  <p>• Classroom</p>
                 </div>
-              )}
+              </div>
 
               {/* Session Timeout Info */}
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-xs text-blue-900">
-                  <strong>Session Timeout:</strong> Your session will automatically expire after 30 minutes of access for security.
+                  <strong>Session Timeout:</strong> Your session will automatically expire after 30 minutes for security.
                 </p>
               </div>
             </form>

@@ -73,12 +73,12 @@
 ## Role-Based Multi-Department System (NEW)
 
 ### Phase 1: Database Schema
-- [ ] Add auditLogs table to track all actions
-- [ ] Add finalClearances table to track Super Admin clearances
-- [ ] Add reopenClearances table to track clearance reopenings
-- [ ] Add departmentPasscodes table to store/manage passcodes
-- [ ] Add finalClearedAt and finalClearedBy to clearances table
-- [ ] Generate and apply migration SQL
+- [x] Add auditLogs table to track all actions
+- [x] Add finalClearances table to track Super Admin clearances
+- [x] Add reopenClearances table to track clearance reopenings
+- [x] Add departmentPasscodes table to store/manage passcodes
+- [x] Seed department passcodes (superadminkabianga2026, librarykabianga2026, etc.)
+- [x] Generate and apply migration SQL (version: 91d35f2b)
 
 ### Phase 2: Authentication & Authorization
 - [ ] Update login system to support department passcodes

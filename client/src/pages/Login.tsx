@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Lock, AlertTriangle, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
 
@@ -12,23 +13,14 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const [passcode, setPasscode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const loginMutation = trpc.auth.loginWithPasscode.useMutation();
 
   // Set up session timeout on component mount
   useEffect(() => {
-    const setupSessionTimeout = () => {
-      const timeout = setTimeout(() => {
-        sessionStorage.removeItem("userRole");
-        sessionStorage.removeItem("userDepartment");
-        toast.error("Session expired. Please log in again.");
-        setLocation("/login");
-      }, SESSION_TIMEOUT);
-
-      return () => clearTimeout(timeout);
-    };
-
     const userRole = sessionStorage.getItem("userRole");
     if (userRole) {
-      setupSessionTimeout();
+      // Already logged in, redirect to dashboard
+      setLocation("/");
     }
   }, [setLocation]);
 
@@ -42,50 +34,34 @@ export default function Login() {
 
     setIsLoading(true);
     try {
-      // Call tRPC endpoint with correct JSON-RPC format
-      const response = await fetch("/api/trpc/auth.loginWithPasscode", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          json: { passcode },
-        }),
-      });
+      const result = await loginMutation.mutateAsync({ passcode });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        toast.error(errorData?.error?.message || "Invalid passcode. Please try again.");
-        setIsLoading(false);
-        return;
-      }
-
-      const data = await response.json();
-      
-      // Extract credentials from tRPC response
-      const credentials = data[0]?.result?.data;
-      
-      if (!credentials) {
-        toast.error("Invalid response from server");
+      if (!result.success) {
+        toast.error("Invalid passcode");
         setIsLoading(false);
         return;
       }
 
       // Store user role and department in session storage
-      sessionStorage.setItem("userRole", credentials.role);
-      sessionStorage.setItem("userDepartment", credentials.department);
+      sessionStorage.setItem("userRole", result.role);
+      sessionStorage.setItem("userDepartment", result.department);
 
       // Set up session timeout
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         sessionStorage.removeItem("userRole");
         sessionStorage.removeItem("userDepartment");
         toast.error("Session expired. Please log in again.");
         setLocation("/login");
       }, SESSION_TIMEOUT);
 
-      toast.success(`Welcome, ${credentials.department}!`);
+      // Store timeout ID for cleanup if needed
+      sessionStorage.setItem("sessionTimeoutId", String(timeout));
+
+      toast.success(`Welcome, ${result.department}!`);
       setLocation("/");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      toast.error("Login failed. Please try again.");
+      toast.error(error?.message || "Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }

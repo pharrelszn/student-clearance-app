@@ -8,8 +8,6 @@ import { Lock, AlertTriangle, Shield } from "lucide-react";
 
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
 
-
-
 export default function Login() {
   const [, setLocation] = useLocation();
   const [passcode, setPasscode] = useState("");
@@ -44,22 +42,32 @@ export default function Login() {
 
     setIsLoading(true);
     try {
-      // Validate passcode on backend
-      const result = await fetch("/api/trpc/auth.loginWithPasscode", {
+      // Call tRPC endpoint with correct JSON-RPC format
+      const response = await fetch("/api/trpc/auth.loginWithPasscode", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ passcode }),
+        body: JSON.stringify({
+          json: { passcode },
+        }),
       });
 
-      if (!result.ok) {
-        const error = await result.json();
-        toast.error(error.message || "Invalid passcode. Please try again.");
+      if (!response.ok) {
+        const errorData = await response.json();
+        toast.error(errorData?.error?.message || "Invalid passcode. Please try again.");
         setIsLoading(false);
         return;
       }
 
-      const data = await result.json();
-      const credentials = data.result.data;
+      const data = await response.json();
+      
+      // Extract credentials from tRPC response
+      const credentials = data[0]?.result?.data;
+      
+      if (!credentials) {
+        toast.error("Invalid response from server");
+        setIsLoading(false);
+        return;
+      }
 
       // Store user role and department in session storage
       sessionStorage.setItem("userRole", credentials.role);
@@ -76,7 +84,8 @@ export default function Login() {
       toast.success(`Welcome, ${credentials.department}!`);
       setLocation("/");
     } catch (error) {
-      toast.error("Login failed");
+      console.error("Login error:", error);
+      toast.error("Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }

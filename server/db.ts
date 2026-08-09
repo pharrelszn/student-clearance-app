@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, students, clearances, financeChecks, labChecks, sportsChecks, classroomChecks, dormChecks, adminConfigs, departmentSignOffs, libraryBooks, ictChecks, medicalChecks, registrarChecks } from "../drizzle/schema";
+import { like, or, eq } from "drizzle-orm";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -449,8 +449,6 @@ export async function searchStudents(query: string) {
   if (!db) throw new Error("Database unavailable");
   
   if (!query) return [];
-  
-  const { like, or } = require('drizzle-orm');
   
   return await db.select().from(students).where(
     or(

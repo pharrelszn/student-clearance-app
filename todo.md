@@ -68,3 +68,47 @@
 - [x] Harden update with duplicate studentId checking
 - [x] Test edit workflow end-to-end (TypeScript: 0 errors)
 - [x] Save checkpoint with Edit Student feature
+
+
+## Role-Based Multi-Department System (NEW)
+
+### Phase 1: Database Schema
+- [ ] Add auditLogs table to track all actions
+- [ ] Add finalClearances table to track Super Admin clearances
+- [ ] Add reopenClearances table to track clearance reopenings
+- [ ] Add departmentPasscodes table to store/manage passcodes
+- [ ] Add finalClearedAt and finalClearedBy to clearances table
+- [ ] Generate and apply migration SQL
+
+### Phase 2: Authentication & Authorization
+- [ ] Update login system to support department passcodes
+- [ ] Create Super Admin login flow
+- [ ] Add role/department verification to context
+- [ ] Create permission checking utility functions
+- [ ] Implement backend permission enforcement
+
+### Phase 3: Backend API Updates
+- [ ] Add permission checks to all department edit endpoints
+- [ ] Implement audit logging on all mutations
+- [ ] Create final clearance endpoint (Super Admin only)
+- [ ] Create reopen clearance endpoint (Super Admin only)
+- [ ] Create department dashboard endpoints
+- [ ] Create Super Admin dashboard endpoints
+
+### Phase 4: Frontend Updates
+- [ ] Update login page for department passcodes
+- [ ] Update StudentSearch for role-specific Edit buttons
+- [ ] Create department-specific dashboards
+- [ ] Create Super Admin dashboard
+- [ ] Add final clearance workflow UI
+- [ ] Add reopen clearance UI
+
+### Phase 5: Testing & Deployment
+- [ ] Test Library user permissions
+- [ ] Test Lab user permissions
+- [ ] Test Sports user permissions
+- [ ] Test Finance user permissions
+- [ ] Test Super Admin permissions
+- [ ] Test audit logging
+- [ ] Test final clearance workflow
+- [ ] Save final checkpoint

@@ -342,3 +342,101 @@ export const registrarChecksRelations = relations(registrarChecks, ({ one }) => 
     references: [clearances.id],
   }),
 }));
+
+/**
+ * Department Passcodes table - stores passcodes for each department and Super Admin
+ */
+export const departmentPasscodes = mysqlTable("departmentPasscodes", {
+  id: int("id").autoincrement().primaryKey(),
+  role: mysqlEnum("role", ["super_admin", "finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical", "registrar"]).notNull().unique(),
+  passcode: varchar("passcode", { length: 255 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DepartmentPasscode = typeof departmentPasscodes.$inferSelect;
+export type InsertDepartmentPasscode = typeof departmentPasscodes.$inferInsert;
+
+/**
+ * Audit Logs table - tracks all important actions
+ */
+export const auditLogs = mysqlTable("auditLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId"),
+  userRole: varchar("userRole", { length: 64 }),
+  userDepartment: varchar("userDepartment", { length: 64 }),
+  studentId: int("studentId"),
+  action: varchar("action", { length: 255 }).notNull(),
+  department: varchar("department", { length: 64 }),
+  previousValue: text("previousValue"),
+  newValue: text("newValue"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = typeof auditLogs.$inferInsert;
+
+/**
+ * Final Clearances table - tracks Super Admin final clearance actions
+ */
+export const finalClearances = mysqlTable("finalClearances", {
+  id: int("id").autoincrement().primaryKey(),
+  clearanceId: int("clearanceId").notNull(),
+  studentId: int("studentId").notNull(),
+  clearedBy: int("clearedBy").notNull(),
+  clearedAt: timestamp("clearedAt").defaultNow().notNull(),
+  certificateUrl: text("certificateUrl"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type FinalClearance = typeof finalClearances.$inferSelect;
+export type InsertFinalClearance = typeof finalClearances.$inferInsert;
+
+/**
+ * Reopen Clearances table - tracks when Super Admin reopens a clearance
+ */
+export const reopenClearances = mysqlTable("reopenClearances", {
+  id: int("id").autoincrement().primaryKey(),
+  clearanceId: int("clearanceId").notNull(),
+  studentId: int("studentId").notNull(),
+  reopenedBy: int("reopenedBy").notNull(),
+  reason: text("reason").notNull(),
+  reopenedAt: timestamp("reopenedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ReopenClearance = typeof reopenClearances.$inferSelect;
+export type InsertReopenClearance = typeof reopenClearances.$inferInsert;
+
+/**
+ * Relations for new tables
+ */
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [auditLogs.userId],
+    references: [users.id],
+  }),
+}));
+
+export const finalClearancesRelations = relations(finalClearances, ({ one }) => ({
+  clearance: one(clearances, {
+    fields: [finalClearances.clearanceId],
+    references: [clearances.id],
+  }),
+  student: one(students, {
+    fields: [finalClearances.studentId],
+    references: [students.id],
+  }),
+}));
+
+export const reopenClearancesRelations = relations(reopenClearances, ({ one }) => ({
+  clearance: one(clearances, {
+    fields: [reopenClearances.clearanceId],
+    references: [clearances.id],
+  }),
+  student: one(students, {
+    fields: [reopenClearances.studentId],
+    references: [students.id],
+  }),
+}));

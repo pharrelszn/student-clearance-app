@@ -72,7 +72,7 @@ export default function Login() {
       <div className="w-full max-w-md">
         {/* Header with Glassmorphism */}
         <div className="mb-8 text-center">
-          <div className="inline-block mb-4 px-6 py-3 glassmorphism rounded-full">
+          <div className="inline-block mb-4 px-6 py-3 glassmorphism rounded-full" style={{color: '#9c2b2b', fontSize: '24px'}}>
             <p className="text-lg font-bold title-shimmer title-glow">Kabianga High School</p>
           </div>
           <h1 className="text-editorial-heading mb-2">Clearance Portal</h1>

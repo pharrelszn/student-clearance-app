@@ -493,3 +493,51 @@ export async function getOrCreateClearance(studentId: number) {
   const created = await db.select().from(clearances).where(eq(clearances.studentId, studentId)).limit(1);
   return created[0];
 }
+
+
+/**
+ * Validate department passcode and return role/department info
+ */
+export async function validateDepartmentPasscode(passcode: string) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { departmentPasscodes } = await import("../drizzle/schema");
+
+  const result = await db
+    .select()
+    .from(departmentPasscodes)
+    .where(eq(departmentPasscodes.passcode, passcode))
+    .limit(1);
+
+  if (result.length === 0) {
+    return null;
+  }
+
+  const record = result[0];
+  return {
+    role: record.role,
+    department: getDepartmentName(record.role),
+  };
+}
+
+/**
+ * Get department display name from role
+ */
+function getDepartmentName(role: string): string {
+  const departmentNames: Record<string, string> = {
+    super_admin: "Super Admin",
+    library: "Library",
+    lab: "Lab/ICT",
+    sports: "Sports",
+    finance: "Finance",
+    dorm: "Dorm/Hostel",
+    medical: "Medical",
+    registrar: "Registrar",
+    classroom: "Classroom",
+    ict: "ICT",
+  };
+  return departmentNames[role] || role;
+}

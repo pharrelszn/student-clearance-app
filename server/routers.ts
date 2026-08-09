@@ -16,6 +16,7 @@ import {
   getAllStudents,
   createStudent,
   deleteStudent,
+  validateDepartmentPasscode,
 } from "./db";
 import {
   clearances,
@@ -44,6 +45,23 @@ export const appRouter = router({
         success: true,
       } as const;
     }),
+    // Backend passcode validation
+    loginWithPasscode: publicProcedure
+      .input(z.object({ passcode: z.string().min(1) }))
+      .mutation(async ({ input }) => {
+        const credentials = await validateDepartmentPasscode(input.passcode);
+        if (!credentials) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Invalid passcode",
+          });
+        }
+        return {
+          success: true,
+          role: credentials.role,
+          department: credentials.department,
+        };
+      }),
   }),
 
   // Student management

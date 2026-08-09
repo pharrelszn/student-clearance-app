@@ -81,9 +81,9 @@
 - [x] Generate and apply migration SQL (version: 91d35f2b)
 
 ### Phase 2: Authentication & Authorization
-- [ ] Update login system to support department passcodes
-- [ ] Create Super Admin login flow
-- [ ] Add role/department verification to context
+- [x] Update login system to support department passcodes (version: 883424af)
+- [x] Create Super Admin login flow
+- [x] Add role/department verification to ProtectedRoute
 - [ ] Create permission checking utility functions
 - [ ] Implement backend permission enforcement
 

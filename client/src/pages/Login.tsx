@@ -8,19 +8,7 @@ import { Lock, AlertTriangle, Shield } from "lucide-react";
 
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
 
-// Department passcodes and their roles
-const DEPARTMENT_PASSCODES: Record<string, { role: string; department: string }> = {
-  "superadminkabianga2026": { role: "super_admin", department: "Super Admin" },
-  "librarykabianga2026": { role: "library", department: "Library" },
-  "labictkabianga2026": { role: "lab", department: "Lab/ICT" },
-  "sportskabianga2026": { role: "sports", department: "Sports" },
-  "financekabianga2026": { role: "finance", department: "Finance" },
-  "dormkabianga2026": { role: "dorm", department: "Dorm/Hostel" },
-  "medicalkabianga2026": { role: "medical", department: "Medical" },
-  "registrarkabianga2026": { role: "registrar", department: "Registrar" },
-  "classroomkabianga2026": { role: "classroom", department: "Classroom" },
-  "ictkabianga2026": { role: "ict", department: "ICT" },
-};
+
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -56,13 +44,22 @@ export default function Login() {
 
     setIsLoading(true);
     try {
-      const credentials = DEPARTMENT_PASSCODES[passcode];
+      // Validate passcode on backend
+      const result = await fetch("/api/trpc/auth.loginWithPasscode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ passcode }),
+      });
 
-      if (!credentials) {
-        toast.error("Invalid passcode. Please try again.");
+      if (!result.ok) {
+        const error = await result.json();
+        toast.error(error.message || "Invalid passcode. Please try again.");
         setIsLoading(false);
         return;
       }
+
+      const data = await result.json();
+      const credentials = data.result.data;
 
       // Store user role and department in session storage
       sessionStorage.setItem("userRole", credentials.role);

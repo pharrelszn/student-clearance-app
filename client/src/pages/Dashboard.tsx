@@ -12,6 +12,11 @@ export default function Dashboard() {
   const { data: summary, isLoading: summaryLoading } = trpc.clearance.getSummary.useQuery();
   const { data: clearances, isLoading: clearancesLoading } = trpc.clearance.listAll.useQuery();
 
+  // Get user role from session storage
+  const userRole = sessionStorage.getItem("userRole");
+  const userDepartment = sessionStorage.getItem("userDepartment");
+  const isSuperAdmin = userRole === "super_admin";
+
   if (authLoading || summaryLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -68,7 +73,7 @@ export default function Dashboard() {
           </div>
           <h1 className="text-editorial-heading mb-2 fade-in-up">Clearance Portal</h1>
           <p className="text-editorial-subheading text-muted-foreground fade-in-up" style={{animationDelay: '0.1s'}}>
-            Manage student clearance processes across all departments
+            {isSuperAdmin ? "Manage student clearance processes across all departments" : `${userDepartment?.toUpperCase()} Department - Manage student clearances`}
           </p>
         </div>
 
@@ -94,6 +99,18 @@ export default function Dashboard() {
           })}
         </div>
 
+        {/* Department Info for Department Users */}
+        {!isSuperAdmin && (
+          <div className="mb-12 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-900">
+              <strong>Department:</strong> {userDepartment?.toUpperCase()}
+            </p>
+            <p className="text-xs text-blue-800 mt-2">
+              You can search for students and manage clearance information for your department only.
+            </p>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="mb-12 flex flex-col sm:flex-row gap-4">
           <Button
@@ -110,25 +127,32 @@ export default function Dashboard() {
           >
             View All Clearances
           </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => setLocation("/admin")}
-          >
-            Admin Panel
-          </Button>
-          <Button
-            size="lg"
-            className="bg-blue-600 text-white hover:bg-blue-700"
-            onClick={() => setLocation("/register")}
-          >
-            Register Student
-          </Button>
+          {/* Admin Panel - Only for Super Admin */}
+          {isSuperAdmin && (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setLocation("/admin")}
+            >
+              Admin Panel
+            </Button>
+          )}
+          {/* Register Student - Only for Super Admin */}
+          {isSuperAdmin && (
+            <Button
+              size="lg"
+              className="bg-blue-600 text-white hover:bg-blue-700"
+              onClick={() => setLocation("/register")}
+            >
+              Register Student
+            </Button>
+          )}
           <Button
             variant="destructive"
             size="lg"
             onClick={() => {
-              sessionStorage.removeItem("portalKeyword");
+              sessionStorage.removeItem("userRole");
+              sessionStorage.removeItem("userDepartment");
               setLocation("/login");
             }}
             className="ml-auto"
@@ -149,28 +173,19 @@ export default function Dashboard() {
               {clearances.slice(0, 5).map((clearance) => (
                 <Card
                   key={clearance.id}
-                  className="border-border cursor-pointer hover:shadow-md transition-shadow"
+                  className="border-border cursor-pointer hover:bg-accent/50 transition-colors"
                   onClick={() => setLocation(`/clearance/${clearance.id}`)}
                 >
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-semibold text-foreground">{clearance.studentName}</p>
-                        <p className="text-sm text-muted-foreground">ID: {clearance.studentId}</p>
+                        <p className="font-medium">{clearance.studentId}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Status: <span className="capitalize">{clearance.status}</span>
+                        </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-medium text-muted-foreground">
-                          {clearance.status === "completed" && (
-                            <span className="text-green-600">✓ Completed</span>
-                          )}
-                          {clearance.status === "in_progress" && (
-                            <span className="text-blue-600">⟳ In Progress</span>
-                          )}
-                          {clearance.status === "pending" && (
-                            <span className="text-amber-600">⊙ Pending</span>
-                          )}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-xs text-muted-foreground">
                           {clearance.initiatedAt ? new Date(clearance.initiatedAt).toLocaleDateString() : 'N/A'}
                         </p>
                       </div>
@@ -181,8 +196,8 @@ export default function Dashboard() {
             </div>
           ) : (
             <Card className="border-border">
-              <CardContent className="pt-6 text-center">
-                <p className="text-muted-foreground">No clearances yet</p>
+              <CardContent className="pt-6 text-center text-muted-foreground">
+                No clearances found
               </CardContent>
             </Card>
           )}

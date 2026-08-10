@@ -188,8 +188,21 @@ export const appRouter = router({
           }).optional(),
         }).optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
         const result = await registerStudentWithDepartments(input);
+        
+        // Log audit action
+        await logAuditAction({
+          userId: ctx.user.id,
+          userRole: ctx.userRole as string,
+          userDepartment: ctx.userDepartment as string,
+          studentId: result.studentId,
+          action: "REGISTER_STUDENT",
+          newValue: JSON.stringify({ name: input.name, studentId: input.studentId, program: input.program }),
+          notes: `Student registered: ${input.name} (${input.studentId})`,
+        });
+        
         return { success: true, studentId: result.studentId, clearanceId: result.clearanceId };
       }),
 

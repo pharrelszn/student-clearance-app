@@ -84,13 +84,16 @@
 - [x] Update login system to support department passcodes (version: 883424af)
 - [x] Create Super Admin login flow
 - [x] Add role/department verification to ProtectedRoute
-- [ ] Create permission checking utility functions
-- [ ] Implement backend permission enforcement
+- [x] Create permission checking utility functions (requireSuperAdmin, requireDepartmentAccess)
+- [x] Implement backend permission enforcement on critical endpoints
 
 ### Phase 3: Backend API Updates
-- [x] Add permission checks to all department edit endpoints (requireDepartmentAccess middleware)
-- [x] Implement audit logging on all mutations (logAuditAction in approve/flag)
+- [x] Add permission checks to registerWithDepartments (Super Admin only)
+- [x] Add permission checks to departmentSignOff.approve (department-specific)
+- [x] Add permission checks to departmentSignOff.flag (department-specific)
+- [x] Implement audit logging on approve/flag/register mutations
 - [x] Create Super Admin dashboard endpoints (getAuditLogs, getClearanceSummary, getAllClearances)
+- [ ] Add permission checks to all department add procedures (finance, lab, sports, etc.)
 - [ ] Create final clearance endpoint (Super Admin only)
 - [ ] Create reopen clearance endpoint (Super Admin only)
 - [ ] Create department-specific dashboard endpoints
@@ -105,13 +108,14 @@
 - [ ] Add reopen clearance UI
 
 ### Phase 5: Testing & Deployment
-- [ ] Test Library user permissions
-- [ ] Test Lab user permissions
-- [ ] Test Sports user permissions
-- [ ] Test Finance user permissions
-- [ ] Test Super Admin permissions
-- [ ] Test audit logging
-- [ ] Test final clearance workflow
+- [x] Write comprehensive RBAC tests (16 tests, all passing)
+- [x] Test audit logging creation
+- [x] Test data integrity
+- [ ] Manual test: Library user permissions
+- [ ] Manual test: Lab user permissions
+- [ ] Manual test: Finance user permissions
+- [ ] Manual test: Super Admin dashboard audit logs
+- [ ] Manual test: Final clearance workflow
 - [ ] Save final checkpoint
 
 

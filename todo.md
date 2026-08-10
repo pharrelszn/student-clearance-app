@@ -88,18 +88,19 @@
 - [ ] Implement backend permission enforcement
 
 ### Phase 3: Backend API Updates
-- [ ] Add permission checks to all department edit endpoints
-- [ ] Implement audit logging on all mutations
+- [x] Add permission checks to all department edit endpoints (requireDepartmentAccess middleware)
+- [x] Implement audit logging on all mutations (logAuditAction in approve/flag)
+- [x] Create Super Admin dashboard endpoints (getAuditLogs, getClearanceSummary, getAllClearances)
 - [ ] Create final clearance endpoint (Super Admin only)
 - [ ] Create reopen clearance endpoint (Super Admin only)
-- [ ] Create department dashboard endpoints
-- [ ] Create Super Admin dashboard endpoints
+- [ ] Create department-specific dashboard endpoints
 
 ### Phase 4: Frontend Updates
-- [ ] Update login page for department passcodes
-- [ ] Update StudentSearch for role-specific Edit buttons
+- [x] Update login page for department passcodes (version: c8ced47a)
+- [x] Create Super Admin dashboard component (SuperAdminDashboard.tsx)
+- [x] Add Super Admin dashboard route (/admin/dashboard)
+- [x] Add Super Admin dashboard button to Dashboard
 - [ ] Create department-specific dashboards
-- [ ] Create Super Admin dashboard
 - [ ] Add final clearance workflow UI
 - [ ] Add reopen clearance UI
 
@@ -112,3 +113,24 @@
 - [ ] Test audit logging
 - [ ] Test final clearance workflow
 - [ ] Save final checkpoint
+
+
+## Critical Gaps to Address Before Next Checkpoint
+
+### Backend Permission & Audit Coverage
+- [ ] Apply requireDepartmentAccess/requireSuperAdmin to ALL department mutation endpoints (finance/lab/sports/classroom/dorm/library/ict/medical/registrar add/update)
+- [ ] Add audit logging to student registration (registerWithDepartments)
+- [ ] Add audit logging to student update endpoint
+- [ ] Add audit logging to student delete endpoint
+- [ ] Add audit logging to library book approval (libraryBook.approveBook)
+- [ ] Add audit logging to admin config changes
+- [ ] Verify all mutations log to auditLogs table with proper user/role/department context
+
+### Testing & Verification
+- [ ] Write vitest test: Department user cannot approve clearance for different department
+- [ ] Write vitest test: Department user cannot flag clearance for different department
+- [ ] Write vitest test: Super Admin can approve/flag any department clearance
+- [ ] Write vitest test: Audit logs created for each approval/flag action
+- [ ] Write vitest test: Student registration creates audit log entry
+- [ ] Manual testing: Department users can only see/edit their own department data
+- [ ] Manual testing: Super Admin can view all audit logs and clearances

@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, students, clearances, financeChecks, labChecks, sportsChecks, classroomChecks, dormChecks, adminConfigs, departmentSignOffs, libraryBooks, ictChecks, medicalChecks, registrarChecks } from "../drizzle/schema";
+import { InsertUser, users, students, clearances, financeChecks, labChecks, sportsChecks, classroomChecks, dormChecks, adminConfigs, departmentSignOffs, libraryBooks, ictChecks, medicalChecks, registrarChecks, auditLogs } from "../drizzle/schema";
 import { like, or, eq } from "drizzle-orm";
 import { ENV } from './_core/env';
 
@@ -540,4 +540,51 @@ function getDepartmentName(role: string): string {
     ict: "ICT",
   };
   return departmentNames[role] || role;
+}
+
+/**
+ * Log an audit action
+ */
+export async function logAuditAction({
+  userId,
+  userRole,
+  userDepartment,
+  studentId,
+  action,
+  department,
+  previousValue,
+  newValue,
+  notes,
+}: {
+  userId?: number;
+  userRole?: string | null;
+  userDepartment?: string | null;
+  studentId?: number;
+  action: string;
+  department?: string;
+  previousValue?: string;
+  newValue?: string;
+  notes?: string;
+}) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Audit] Database not available for logging");
+    return;
+  }
+
+  try {
+    await db.insert(auditLogs).values({
+      userId: userId || null,
+      userRole: userRole || null,
+      userDepartment: userDepartment || null,
+      studentId: studentId || null,
+      action,
+      department: department || null,
+      previousValue: previousValue || null,
+      newValue: newValue || null,
+      notes: notes || null,
+    });
+  } catch (error) {
+    console.error("[Audit] Failed to log action:", error);
+  }
 }

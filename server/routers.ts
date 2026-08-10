@@ -17,6 +17,7 @@ import {
   createStudent,
   deleteStudent,
   validateDepartmentPasscode,
+  logAuditAction,
 } from "./db";
 import {
   clearances,
@@ -33,6 +34,26 @@ import {
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+
+// Permission check helpers
+function requireSuperAdmin(ctx: any) {
+  if (ctx.userRole !== "super_admin") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Only Super Admin can perform this action",
+    });
+  }
+}
+
+function requireDepartmentAccess(ctx: any, requiredDepartment: string | null | undefined) {
+  if (ctx.userRole === "super_admin") return; // Super Admin has access to everything
+  if (!requiredDepartment || ctx.userDepartment !== requiredDepartment) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: `Access denied. You can only manage ${ctx.userDepartment} department clearances`,
+    });
+  }
+}
 
 export const appRouter = router({
   system: systemRouter,
@@ -110,6 +131,10 @@ export const appRouter = router({
       }),
 
     registerWithDepartments: protectedProcedure
+      .use(({ ctx, next }) => {
+        requireSuperAdmin(ctx);
+        return next({ ctx });
+      })
       .input(z.object({
         studentId: z.string().min(1),
         name: z.string().min(1),
@@ -307,6 +332,10 @@ export const appRouter = router({
   // Department sign-offs
   departmentSignOff: router({
     approve: protectedProcedure
+      .use(({ ctx, next }) => {
+        requireDepartmentAccess(ctx, ctx.userDepartment);
+        return next({ ctx });
+      })
       .input(
         z.object({
           clearanceId: z.number(),
@@ -316,9 +345,21 @@ export const appRouter = router({
       )
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
+        
+        // Verify the department matches the user's department
+        if (ctx.userRole !== "super_admin" && input.department !== ctx.userDepartment) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: `You can only approve ${ctx.userDepartment} department clearances`,
+          });
+        }
 
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        // Get clearance to find student ID for audit logging
+        const clearanceData = await db.select().from(clearances).where(eq(clearances.id, input.clearanceId)).limit(1);
+        const studentId = clearanceData?.[0]?.studentId;
 
         const now = new Date();
 
@@ -335,6 +376,18 @@ export const appRouter = router({
           .where(
             sql`${departmentSignOffs.clearanceId} = ${input.clearanceId} AND ${departmentSignOffs.department} = ${input.department}`
           );
+
+        // Log audit action
+        await logAuditAction({
+          userId: ctx.user.id,
+          userRole: ctx.userRole as string,
+          userDepartment: ctx.userDepartment as string,
+          studentId,
+          action: "APPROVE_DEPARTMENT_CLEARANCE",
+          department: input.department,
+          newValue: JSON.stringify({ status: "approved", notes: input.notes }),
+          notes: `Department ${input.department} clearance approved`,
+        });
 
         // Check if all departments are approved
         const allSignOffs = await db
@@ -353,24 +406,51 @@ export const appRouter = router({
               updatedAt: now,
             })
             .where(eq(clearances.id, input.clearanceId));
+
+          // Log final clearance completion
+          await logAuditAction({
+            userId: ctx.user.id,
+            userRole: ctx.userRole as string,
+            userDepartment: ctx.userDepartment as string,
+            studentId,
+            action: "COMPLETE_CLEARANCE",
+            newValue: JSON.stringify({ status: "completed" }),
+            notes: "All departments have approved clearance",
+          });
         }
 
         return { success: true, allApproved };
       }),
 
     flag: protectedProcedure
+      .use(({ ctx, next }) => {
+        requireDepartmentAccess(ctx, ctx.userDepartment);
+        return next({ ctx });
+      })
       .input(
         z.object({
           clearanceId: z.number(),
-          department: z.enum(["finance", "lab", "sports", "classroom", "dorm"]),
+          department: z.enum(["finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical", "registrar"]),
           notes: z.string(),
         })
       )
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
+        
+        // Verify the department matches the user's department
+        if (ctx.userRole !== "super_admin" && input.department !== ctx.userDepartment) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: `You can only flag ${ctx.userDepartment} department clearances`,
+          });
+        }
 
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        // Get clearance to find student ID for audit logging
+        const clearanceData = await db.select().from(clearances).where(eq(clearances.id, input.clearanceId)).limit(1);
+        const studentId = clearanceData?.[0]?.studentId;
 
         const now = new Date();
 
@@ -386,6 +466,18 @@ export const appRouter = router({
           .where(
             sql`${departmentSignOffs.clearanceId} = ${input.clearanceId} AND ${departmentSignOffs.department} = ${input.department}`
           );
+
+        // Log audit action
+        await logAuditAction({
+          userId: ctx.user.id,
+          userRole: ctx.userRole as string,
+          userDepartment: ctx.userDepartment as string,
+          studentId,
+          action: "FLAG_DEPARTMENT_CLEARANCE",
+          department: input.department,
+          newValue: JSON.stringify({ status: "flagged", notes: input.notes }),
+          notes: `Department ${input.department} clearance flagged: ${input.notes}`,
+        });
 
         return { success: true };
       }),
@@ -717,6 +809,76 @@ export const appRouter = router({
           .select()
           .from(libraryBooks)
           .where(eq(libraryBooks.clearanceId, input.clearanceId));
+      }),
+  }),
+
+  // Super Admin procedures
+  superAdmin: router({
+    // Get all audit logs
+    getAuditLogs: protectedProcedure
+      .use(({ ctx, next }) => {
+        requireSuperAdmin(ctx);
+        return next({ ctx });
+      })
+      .input(
+        z.object({
+          limit: z.number().optional().default(50),
+          offset: z.number().optional().default(0),
+        })
+      )
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+
+        const { auditLogs } = await import("../drizzle/schema");
+        return await db
+          .select()
+          .from(auditLogs)
+          .orderBy((t) => sql`${t.createdAt} DESC`)
+          .limit(input.limit)
+          .offset(input.offset);
+      }),
+
+    // Get clearance summary for dashboard
+    getClearanceSummary: protectedProcedure
+      .use(({ ctx, next }) => {
+        requireSuperAdmin(ctx);
+        return next({ ctx });
+      })
+      .query(async () => {
+        return await getClearanceStatusSummary();
+      }),
+
+    // Get all clearances with student info
+    getAllClearances: protectedProcedure
+      .use(({ ctx, next }) => {
+        requireSuperAdmin(ctx);
+        return next({ ctx });
+      })
+      .query(async () => {
+        const db = await getDb();
+        if (!db) return [];
+
+        const allClearances = await db
+          .select()
+          .from(clearances);
+
+        // Enrich with student info
+        const enriched = await Promise.all(
+          allClearances.map(async (c) => {
+            const student = await db
+              .select()
+              .from(students)
+              .where(eq(students.id, c.studentId))
+              .limit(1);
+            return {
+              ...c,
+              student: student?.[0] || null,
+            };
+          })
+        );
+
+        return enriched;
       }),
   }),
 });

@@ -137,6 +137,15 @@ export default function Dashboard() {
               Admin Panel
             </Button>
           )}
+          {isSuperAdmin && (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setLocation("/admin/dashboard")}
+            >
+              📊 Dashboard
+            </Button>
+          )}
           {/* Register Student - Only for Super Admin */}
           {isSuperAdmin && (
             <Button

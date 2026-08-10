@@ -13,6 +13,7 @@ import AdminPanel from "./pages/AdminPanel";
 import StudentRegistration from "./pages/StudentRegistration";
 import Login from "./pages/Login";
 import Settings from "./pages/Settings";
+import { SuperAdminDashboard } from "./pages/SuperAdminDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function Router() {
@@ -27,6 +28,7 @@ function Router() {
       <Route path={"/clearance/:id"} component={() => <ProtectedRoute><ClearanceDetail /></ProtectedRoute>} />
       <Route path={"/certificate/:id"} component={() => <ProtectedRoute><ClearanceCertificate /></ProtectedRoute>} />
       <Route path={"/settings"} component={() => <ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path={"/admin/dashboard"} component={() => <ProtectedRoute requiredRole="super_admin"><SuperAdminDashboard /></ProtectedRoute>} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

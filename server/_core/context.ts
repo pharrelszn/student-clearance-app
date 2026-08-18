@@ -20,7 +20,7 @@ export async function createContext(
   try {
     user = await authenticateLocalRequest(opts.req);
     if (user) {
-      userRole = user.department === "Super Admin" ? "super_admin" : user.department?.toLowerCase() ?? user.role;
+      userRole = user.department ?? user.role;
       userDepartment = user.department;
     }
   } catch (error) {

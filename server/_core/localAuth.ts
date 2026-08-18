@@ -1,8 +1,10 @@
 import type { Express, Request, Response } from "express";
 import { SignJWT, jwtVerify } from "jose";
+import { eq } from "drizzle-orm";
 import { getSessionCookieOptions } from "./cookies";
 import { COOKIE_NAME } from "@shared/const";
-import { validateDepartmentPasscode, getOrCreateLocalUser } from "../db";
+import { validateDepartmentPasscode, getDb } from "../db";
+import { users } from "../../drizzle/schema";
 import { ENV } from "./env";
 
 const SESSION_TTL_MS = 30 * 60 * 1000;
@@ -18,6 +20,28 @@ function getSecret() {
     throw new Error("JWT_SECRET must be configured");
   }
   return new TextEncoder().encode(ENV.cookieSecret);
+}
+
+async function getOrCreateLocalUser(role: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+
+  const openId = `local:${role}`;
+  const existing = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  if (existing.length > 0) return existing[0];
+
+  await db.insert(users).values({
+    openId,
+    name: role === "super_admin" ? "Super Admin" : `${role.charAt(0).toUpperCase()}${role.slice(1)} Department`,
+    loginMethod: "local",
+    role: "user",
+    department: role,
+    lastSignedIn: new Date(),
+  });
+
+  const created = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  if (created.length === 0) throw new Error("Failed to create local user");
+  return created[0];
 }
 
 export async function createLocalSession(session: LocalSession) {

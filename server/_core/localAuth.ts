@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { SignJWT, jwtVerify } from "jose";
+import { parse as parseCookieHeader } from "cookie";
 import { eq } from "drizzle-orm";
 import { getSessionCookieOptions } from "./cookies";
 import { COOKIE_NAME } from "@shared/const";
@@ -79,7 +80,8 @@ export async function verifyLocalSession(token: string | undefined): Promise<Loc
 }
 
 export async function authenticateLocalRequest(req: Request) {
-  const token = req.cookies?.[COOKIE_NAME] as string | undefined;
+  const cookies = parseCookieHeader(req.headers.cookie ?? "");
+  const token = cookies[COOKIE_NAME];
   const session = await verifyLocalSession(token);
   if (!session) return null;
 

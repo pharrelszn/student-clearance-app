@@ -5,23 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Shield } from "lucide-react";
-import { trpc } from "@/lib/trpc";
 
-const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
+const SESSION_TIMEOUT = 30 * 60 * 1000;
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const [passcode, setPasscode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const loginMutation = trpc.auth.loginWithPasscode.useMutation();
 
-  // Set up session timeout on component mount
   useEffect(() => {
     const userRole = sessionStorage.getItem("userRole");
-    if (userRole) {
-      // Already logged in, redirect to dashboard
-      setLocation("/");
-    }
+    if (userRole) setLocation("/");
   }, [setLocation]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -34,38 +28,35 @@ export default function Login() {
 
     setIsLoading(true);
     try {
-      const result = await loginMutation.mutateAsync({ passcode });
+      const response = await fetch("/api/auth/passcode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ passcode }),
+      });
+      const result = await response.json();
 
-      if (!result.success) {
-        toast.error("Invalid passcode");
-        setIsLoading(false);
+      if (!response.ok || !result.success) {
+        toast.error(result.error || "Invalid passcode");
         return;
       }
 
-      // Store user role and department in session storage and cookies
       sessionStorage.setItem("userRole", result.role);
       sessionStorage.setItem("userDepartment", result.department);
-      
-      // Also set cookies for backend access
-      document.cookie = `userRole=${encodeURIComponent(result.role)}; path=/; max-age=${SESSION_TIMEOUT / 1000}`;
-      document.cookie = `userDepartment=${encodeURIComponent(result.department)}; path=/; max-age=${SESSION_TIMEOUT / 1000}`;
 
-      // Set up session timeout
-      const timeout = setTimeout(() => {
+      const timeout = window.setTimeout(() => {
         sessionStorage.removeItem("userRole");
         sessionStorage.removeItem("userDepartment");
         toast.error("Session expired. Please log in again.");
         setLocation("/login");
       }, SESSION_TIMEOUT);
-
-      // Store timeout ID for cleanup if needed
       sessionStorage.setItem("sessionTimeoutId", String(timeout));
 
       toast.success(`Welcome, ${result.department}!`);
       setLocation("/");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Login error:", error);
-      toast.error(error?.message || "Login failed. Please try again.");
+      toast.error("Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -74,18 +65,14 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        {/* Header with Glassmorphism */}
         <div className="mb-8 text-center">
           <div className="inline-block mb-4 px-6 py-3 glassmorphism rounded-full" style={{color: '#9c2b2b', fontSize: '24px'}}>
             <p className="text-lg font-bold title-shimmer title-glow">Kabianga High School</p>
           </div>
           <h1 className="text-editorial-heading mb-2">Clearance Portal</h1>
-          <p className="text-editorial-subheading text-muted-foreground">
-            Department-based access system
-          </p>
+          <p className="text-editorial-subheading text-muted-foreground">Department-based access system</p>
         </div>
 
-        {/* Login Card */}
         <Card className="border-border glassmorphism">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -116,11 +103,8 @@ export default function Login() {
                 {isLoading ? "Verifying..." : "Access Portal"}
               </Button>
 
-              <p className="text-xs text-muted-foreground text-center mt-4">
-                Contact your administrator for your department passcode
-              </p>
+              <p className="text-xs text-muted-foreground text-center mt-4">Contact your administrator for your department passcode</p>
 
-              {/* Available Departments Info */}
               <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
                 <p className="text-xs font-semibold text-blue-900 mb-2">Available Departments:</p>
                 <div className="text-xs text-blue-800 space-y-1">
@@ -136,11 +120,8 @@ export default function Login() {
                 </div>
               </div>
 
-              {/* Session Timeout Info */}
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-xs text-blue-900">
-                  <strong>Session Timeout:</strong> Your session will automatically expire after 30 minutes for security.
-                </p>
+                <p className="text-xs text-blue-900"><strong>Session Timeout:</strong> Your session will automatically expire after 30 minutes for security.</p>
               </div>
             </form>
           </CardContent>

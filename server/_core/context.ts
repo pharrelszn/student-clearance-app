@@ -1,6 +1,6 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
-import { sdk } from "./sdk";
+import { authenticateLocalRequest } from "./localAuth";
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
@@ -14,21 +14,18 @@ export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
   let user: User | null = null;
+  let userRole: string | null = null;
+  let userDepartment: string | null = null;
 
   try {
-    user = await sdk.authenticateRequest(opts.req);
+    user = await authenticateLocalRequest(opts.req);
+    if (user) {
+      userRole = user.department === "Super Admin" ? "super_admin" : user.department?.toLowerCase() ?? user.role;
+      userDepartment = user.department;
+    }
   } catch (error) {
-    // Authentication is optional for public procedures.
-    user = null;
+    console.warn("[Auth] Local session validation failed", error);
   }
-
-  // Extract role and department from cookies
-  const cookies = opts.req.headers.cookie || '';
-  const userRoleMatch = cookies.match(/userRole=([^;]+)/);
-  const userDepartmentMatch = cookies.match(/userDepartment=([^;]+)/);
-  
-  const userRole = userRoleMatch ? decodeURIComponent(userRoleMatch[1]) : null;
-  const userDepartment = userDepartmentMatch ? decodeURIComponent(userDepartmentMatch[1]) : null;
 
   return {
     req: opts.req,

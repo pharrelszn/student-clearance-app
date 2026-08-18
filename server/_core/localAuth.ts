@@ -83,7 +83,7 @@ export function registerLocalAuthRoutes(app: Express) {
       const token = await createLocalSession({
         userId: user.id,
         role: credentials.role,
-        department: credentials.department,
+        department: credentials.role,
       });
 
       res.cookie(COOKIE_NAME, token, {

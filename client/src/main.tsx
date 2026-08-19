@@ -1,7 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { TRPCClientError } from "@trpc/client";
+import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
@@ -18,15 +18,11 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
 };
 
 queryClient.getQueryCache().subscribe(event => {
-  if (event.type === "updated" && event.action.type === "error") {
-    redirectToLoginIfUnauthorized(event.query.state.error);
-  }
+  if (event.type === "updated" && event.action.type === "error") redirectToLoginIfUnauthorized(event.query.state.error);
 });
 
 queryClient.getMutationCache().subscribe(event => {
-  if (event.type === "updated" && event.action.type === "error") {
-    redirectToLoginIfUnauthorized(event.mutation.state.error);
-  }
+  if (event.type === "updated" && event.action.type === "error") redirectToLoginIfUnauthorized(event.mutation.state.error);
 });
 
 const trpcClient = trpc.createClient({

@@ -1,65 +1,63 @@
-import { COOKIE_NAME, ONE_YEAR_MS, OAUTH_STATE_COOKIE, decodeOAuthState } from "@shared/const";
-import { parse as parseCookieHeader } from "cookie";
 import type { Express, Request, Response } from "express";
-import * as db from "../db";
+import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
-
-function getQueryParam(req: Request, key: string): string | undefined {
-  const value = req.query[key];
-  return typeof value === "string" ? value : undefined;
-}
+import { upsertUser, getUserByOpenId, validateDepartmentPasscode } from "../db";
 
 export function registerOAuthRoutes(app: Express) {
-  app.get("/api/oauth/callback", async (req: Request, res: Response) => {
-    const code = getQueryParam(req, "code");
-    const state = getQueryParam(req, "state");
-
-    if (!code || !state) {
-      res.status(400).json({ error: "code and state are required" });
-      return;
-    }
-
-    // CSRF guard: the nonce in `state` must match the one-time cookie that
-    // startLogin set in the browser that began this login. An attacker can
-    // forge `state`, but cannot plant this cookie in the victim's browser.
-    const { nonce } = decodeOAuthState(state);
-    const expectedNonce = parseCookieHeader(req.headers.cookie ?? "")[OAUTH_STATE_COOKIE];
-    if (!nonce || nonce !== expectedNonce) {
-      res.status(403).json({ error: "invalid oauth state" });
-      return;
-    }
-    res.clearCookie(OAUTH_STATE_COOKIE, { path: "/", secure: true, sameSite: "none" });
-
+  app.post("/api/auth/passcode", async (req: Request, res: Response) => {
     try {
-      const tokenResponse = await sdk.exchangeCodeForToken(code, state);
-      const userInfo = await sdk.getUserInfo(tokenResponse.accessToken);
-
-      if (!userInfo.openId) {
-        res.status(400).json({ error: "openId missing from user info" });
+      const passcode = typeof req.body?.passcode === "string" ? req.body.passcode.trim() : "";
+      if (!passcode) {
+        res.status(400).json({ error: "Passcode is required" });
         return;
       }
 
-      await db.upsertUser({
-        openId: userInfo.openId,
-        name: userInfo.name || null,
-        email: userInfo.email ?? null,
-        loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
+      const credentials = await validateDepartmentPasscode(passcode);
+      if (!credentials) {
+        res.status(401).json({ error: "Invalid passcode" });
+        return;
+      }
+
+      const openId = `local:${credentials.role}`;
+      await upsertUser({
+        openId,
+        name: credentials.department,
+        email: null,
+        loginMethod: "local-passcode",
+        role: "user",
         lastSignedIn: new Date(),
       });
 
-      const sessionToken = await sdk.createSessionToken(userInfo.openId, {
-        name: userInfo.name || "",
-        expiresInMs: ONE_YEAR_MS,
+      const user = await getUserByOpenId(openId);
+      if (!user) {
+        res.status(500).json({ error: "Unable to create local user" });
+        return;
+      }
+
+      const token = await sdk.createSessionToken(openId, {
+        name: user.name ?? credentials.department,
+        role: credentials.role,
+        department: credentials.department,
       });
 
       const cookieOptions = getSessionCookieOptions(req);
-      res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+      res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: 30 * 60 * 1000 });
+      res.cookie("userRole", encodeURIComponent(credentials.role), { ...cookieOptions, maxAge: 30 * 60 * 1000 });
+      res.cookie("userDepartment", encodeURIComponent(credentials.department), { ...cookieOptions, maxAge: 30 * 60 * 1000 });
 
-      res.redirect(302, "/");
+      res.json({ success: true, role: credentials.role, department: credentials.department });
     } catch (error) {
-      console.error("[OAuth] Callback failed", error);
-      res.status(500).json({ error: "OAuth callback failed" });
+      console.error("[Auth] Local login failed", error);
+      res.status(500).json({ error: "Login failed" });
     }
+  });
+
+  app.post("/api/auth/logout", (req: Request, res: Response) => {
+    const options = getSessionCookieOptions(req);
+    res.clearCookie(COOKIE_NAME, options);
+    res.clearCookie("userRole", options);
+    res.clearCookie("userDepartment", options);
+    res.json({ success: true });
   });
 }

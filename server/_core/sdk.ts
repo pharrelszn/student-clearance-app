@@ -25,8 +25,8 @@ function parseCookies(cookieHeader: string | undefined) {
 }
 
 function getSessionSecret() {
-  if (!ENV.cookieSecret) throw new Error("JWT_SECRET must be configured");
-  return new TextEncoder().encode(ENV.cookieSecret);
+  const secret = ENV.cookieSecret || "student-clearance-local-dev-secret";
+  return new TextEncoder().encode(secret);
 }
 
 class LocalAuthService {

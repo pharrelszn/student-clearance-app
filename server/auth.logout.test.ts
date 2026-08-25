@@ -3,6 +3,7 @@ import { appRouter } from "./routers";
 import { COOKIE_NAME } from "../shared/const";
 import type { TrpcContext } from "./_core/context";
 import { validateDepartmentPasscode } from "./db";
+import { sdk } from "./_core/sdk";
 
 type CookieCall = { name: string; options: Record<string, unknown> };
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
@@ -44,5 +45,16 @@ describe("auth.logout", () => {
       role: "super_admin",
       department: "Super Admin",
     });
+  });
+
+  it("creates local session tokens without external auth env config", async () => {
+    const token = await sdk.createSessionToken("local:test-user", {
+      role: "super_admin",
+      department: "Super Admin",
+      name: "Test Admin",
+    });
+
+    expect(token).toEqual(expect.any(String));
+    expect(token.length).toBeGreaterThan(20);
   });
 });

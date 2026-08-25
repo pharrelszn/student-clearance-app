@@ -9,14 +9,19 @@ import { Shield } from "lucide-react";
 const SESSION_TIMEOUT = 30 * 60 * 1000;
 
 export default function Login() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [passcode, setPasscode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const userRole = sessionStorage.getItem("userRole");
-    if (userRole) setLocation("/");
-  }, [setLocation]);
+    const userDepartment = sessionStorage.getItem("userDepartment");
+    const hasSession = Boolean(userRole && userDepartment);
+
+    if (hasSession && location !== "/") {
+      setLocation("/");
+    }
+  }, [location, setLocation]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

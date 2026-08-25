@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { appRouter } from "./routers";
 import { COOKIE_NAME } from "../shared/const";
 import type { TrpcContext } from "./_core/context";
+import { validateDepartmentPasscode } from "./db";
 
 type CookieCall = { name: string; options: Record<string, unknown> };
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
@@ -36,5 +37,12 @@ describe("auth.logout", () => {
     expect(clearedCookies).toHaveLength(1);
     expect(clearedCookies[0]?.name).toBe(COOKIE_NAME);
     expect(clearedCookies[0]?.options).toMatchObject({ maxAge: -1, secure: true, sameSite: "none", httpOnly: true, path: "/" });
+  });
+
+  it("accepts seeded demo passcodes even when the database is unavailable", async () => {
+    await expect(validateDepartmentPasscode("superadminkabianga2026")).resolves.toMatchObject({
+      role: "super_admin",
+      department: "Super Admin",
+    });
   });
 });

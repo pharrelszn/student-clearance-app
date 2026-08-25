@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
-import { upsertUser, getUserByOpenId, validateDepartmentPasscode } from "../db";
+import { upsertUser, getUserByOpenId, validateDepartmentPasscode, getDb } from "../db";
 
 export function registerOAuthRoutes(app: Express) {
   app.post("/api/auth/passcode", async (req: Request, res: Response) => {
@@ -20,23 +20,21 @@ export function registerOAuthRoutes(app: Express) {
       }
 
       const openId = `local:${credentials.role}`;
-      await upsertUser({
-        openId,
-        name: credentials.department,
-        email: null,
-        loginMethod: "local-passcode",
-        role: "user",
-        lastSignedIn: new Date(),
-      });
-
-      const user = await getUserByOpenId(openId);
-      if (!user) {
-        res.status(500).json({ error: "Unable to create local user" });
-        return;
+      const db = await getDb();
+      if (db) {
+        await upsertUser({
+          openId,
+          name: credentials.department,
+          email: null,
+          loginMethod: "local-passcode",
+          role: "user",
+          lastSignedIn: new Date(),
+        });
       }
 
+      const user = db ? await getUserByOpenId(openId) : undefined;
       const token = await sdk.createSessionToken(openId, {
-        name: user.name ?? credentials.department,
+        name: user?.name ?? credentials.department,
         role: credentials.role,
         department: credentials.department,
       });

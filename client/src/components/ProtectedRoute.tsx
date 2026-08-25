@@ -8,30 +8,32 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const userRole = sessionStorage.getItem("userRole");
     const userDepartment = sessionStorage.getItem("userDepartment");
+    const hasSession = Boolean(userRole && userDepartment);
 
-    if (!userRole || !userDepartment) {
-      setLocation("/login");
+    if (!hasSession) {
+      if (location !== "/login") setLocation("/login");
       setIsLoading(false);
+      setIsAuthorized(false);
       return;
     }
 
-    // If specific role is required, check if user has it
     if (requiredRole && userRole !== requiredRole) {
-      setLocation("/");
+      if (location !== "/") setLocation("/");
       setIsLoading(false);
+      setIsAuthorized(false);
       return;
     }
 
     setIsAuthorized(true);
     setIsLoading(false);
-  }, [setLocation, requiredRole]);
+  }, [location, setLocation, requiredRole]);
 
   if (isLoading) {
     return (

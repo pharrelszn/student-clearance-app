@@ -9,12 +9,21 @@ import { CheckCircle2, Clock, AlertCircle } from "lucide-react";
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
-  const { data: summary, isLoading: summaryLoading } = trpc.clearance.getSummary.useQuery();
-  const { data: clearances, isLoading: clearancesLoading } = trpc.clearance.listAll.useQuery();
 
   // Get user role from session storage
   const userRole = sessionStorage.getItem("userRole");
   const userDepartment = sessionStorage.getItem("userDepartment");
+  const isAuthenticated = Boolean(userRole && userDepartment);
+
+  const { data: summary, isLoading: summaryLoading } = trpc.clearance.getSummary.useQuery(undefined, {
+    enabled: isAuthenticated,
+    retry: false,
+  });
+  const { data: clearances, isLoading: clearancesLoading } = trpc.clearance.listAll.useQuery(undefined, {
+    enabled: isAuthenticated,
+    retry: false,
+  });
+
   const isSuperAdmin = userRole === "super_admin";
 
   if (authLoading || summaryLoading) {

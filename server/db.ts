@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, students, clearances, financeChecks, labChecks, sportsChecks, classroomChecks, dormChecks, adminConfigs, departmentSignOffs, libraryBooks, ictChecks, medicalChecks, registrarChecks, auditLogs } from "../drizzle/schema";
-import { like, or, eq } from "drizzle-orm";
+import { like, or, eq, and } from "drizzle-orm";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -444,19 +444,57 @@ export async function registerStudentWithDepartments(input: {
 }
 
 
-export async function searchStudents(query: string) {
+export async function searchStudents({
+  query,
+  status,
+  department,
+}: {
+  query: string;
+  status?: "pending" | "in_progress" | "completed";
+  department?: "finance" | "lab" | "sports" | "classroom" | "dorm" | "library" | "ict" | "medical" | "registrar";
+}) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  
-  if (!query) return [];
-  
-  return await db.select().from(students).where(
-    or(
-      like(students.name, `%${query}%`),
-      like(students.studentId, `%${query}%`),
-      like(students.admissionNumber, `%${query}%`)
-    )
-  ).limit(10);
+
+  const searchCondition = query
+    ? or(
+        like(students.name, `%${query}%`),
+        like(students.studentId, `%${query}%`),
+        like(students.admissionNumber, `%${query}%`),
+      )
+    : undefined;
+  const conditions = [searchCondition, status ? eq(clearances.status, status) : undefined, department ? eq(departmentSignOffs.department, department) : undefined].filter(Boolean);
+
+  const rows = await db
+    .select({
+      student: students,
+      clearanceStatus: clearances.status,
+      department: departmentSignOffs.department,
+    })
+    .from(students)
+    .leftJoin(clearances, eq(clearances.studentId, students.id))
+    .leftJoin(departmentSignOffs, eq(departmentSignOffs.clearanceId, clearances.id))
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .limit(100);
+
+  const grouped = new Map<number, ReturnType<typeof Object.create>>();
+  for (const row of rows) {
+    const existing = grouped.get(row.student.id);
+    if (existing) {
+      if (row.department) existing.departments.add(row.department);
+      continue;
+    }
+    grouped.set(row.student.id, {
+      ...row.student,
+      clearanceStatus: row.clearanceStatus ?? "pending",
+      departments: new Set(row.department ? [row.department] : []),
+    });
+  }
+
+  return Array.from(grouped.values()).map((student) => ({
+    ...student,
+    departments: Array.from(student.departments).sort(),
+  }));
 }
 
 export async function getClearanceStatusSummary() {

@@ -120,9 +120,13 @@ export const appRouter = router({
   // Student management
   student: router({
     search: protectedProcedure
-      .input(z.object({ query: z.string().min(1) }))
+      .input(z.object({
+        query: z.string().default(""),
+        status: z.enum(["pending", "in_progress", "completed"]).optional(),
+        department: z.enum(["finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical", "registrar"]).optional(),
+      }))
       .query(async ({ input }) => {
-        const results = await searchStudents(input.query);
+        const results = await searchStudents(input);
         return results;
       }),
 

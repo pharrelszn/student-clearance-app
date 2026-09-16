@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -63,6 +64,15 @@ export default function StudentSearch() {
     setDepartment("all");
     setSortBy("name");
     setSortDirection("asc");
+  };
+
+  const getStatusBadge = (clearanceStatus: string) => {
+    const styles: Record<string, { label: string; className: string }> = {
+      pending: { label: "Pending", className: "border-amber-200 bg-amber-100 text-amber-900" },
+      in_progress: { label: "In progress", className: "border-blue-200 bg-blue-100 text-blue-900" },
+      completed: { label: "Completed", className: "border-emerald-200 bg-emerald-100 text-emerald-900" },
+    };
+    return styles[clearanceStatus] ?? { label: "Unknown", className: "border-slate-200 bg-slate-100 text-slate-900" };
   };
 
   const handleSelectStudent = (studentId: number) => {
@@ -172,9 +182,12 @@ export default function StudentSearch() {
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <p className="font-semibold text-foreground text-lg">
-                          {student.name}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <p className="font-semibold text-foreground text-lg">{student.name}</p>
+                          <Badge variant="outline" className={getStatusBadge(student.clearanceStatus).className}>
+                            {getStatusBadge(student.clearanceStatus).label}
+                          </Badge>
+                        </div>
                         <div className="mt-2 space-y-1">
                           <p className="text-sm text-muted-foreground">
                             <span className="text-editorial-caption">Student ID:</span> {student.studentId}
@@ -186,7 +199,7 @@ export default function StudentSearch() {
                             <span className="text-editorial-caption">Graduation:</span> {student.graduationYear}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            <span className="text-editorial-caption">Clearance:</span> {student.clearanceStatus.replace("_", " ")}
+                            <span className="text-editorial-caption">Clearance:</span> {getStatusBadge(student.clearanceStatus).label}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             <span className="text-editorial-caption">Departments:</span> {student.departments.length > 0 ? student.departments.join(", ") : "Not started"}

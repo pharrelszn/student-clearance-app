@@ -8,6 +8,13 @@ describe("role sessions", () => {
     expect(readRoleSession(token)).toMatchObject({ role: "finance", department: "Finance" });
   });
 
+  it("uses the server-only Forge key when JWT_SECRET is unavailable", () => {
+    delete process.env.JWT_SECRET;
+    process.env.BUILT_IN_FORGE_API_KEY = "b".repeat(32);
+    const token = createRoleSession("library", "Library");
+    expect(readRoleSession(token)).toMatchObject({ role: "library", department: "Library" });
+  });
+
   it("rejects tampered sessions", () => {
     process.env.JWT_SECRET = "a".repeat(32);
     const token = createRoleSession("finance", "Finance");
@@ -24,4 +31,5 @@ describe("role sessions", () => {
 
 afterEach(() => {
   delete process.env.JWT_SECRET;
+  delete process.env.BUILT_IN_FORGE_API_KEY;
 });

@@ -19,7 +19,7 @@ Finance: financekabianga2026
 Dorm: dormkabianga2026
 Medical: medicalkabianga2026
 Registrar: registrarkabianga2026
-ICT: labictkabianga2026
+ICT: ictkabianga2026
 Classroom: classroomkabianga2026
 ```
 

@@ -27,11 +27,25 @@ export async function createContext(
   const roleSession = readRoleSession(parseCookieHeader(opts.req.headers.cookie ?? "")[ROLE_SESSION_COOKIE]);
   const userRole = roleSession?.role ?? null;
   const userDepartment = roleSession?.department ?? null;
+  const passcodeUser: User | null = roleSession
+    ? {
+        id: 0,
+        openId: `passcode:${roleSession.role}`,
+        name: roleSession.department,
+        email: null,
+        loginMethod: "passcode",
+        role: roleSession.role === "super_admin" ? "admin" : "user",
+        department: roleSession.role,
+        createdAt: new Date(0),
+        updatedAt: new Date(0),
+        lastSignedIn: new Date(),
+      }
+    : null;
 
   return {
     req: opts.req,
     res: opts.res,
-    user,
+    user: user ?? passcodeUser,
     userRole,
     userDepartment,
   };

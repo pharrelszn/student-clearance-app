@@ -8,7 +8,7 @@ const ROLE_SESSION_MAX_AGE_MS = 30 * 60 * 1000;
 type RoleSession = { role: string; department: string; exp: number };
 
 function getRoleSessionSecret() {
-  const secret = [process.env.JWT_SECRET, process.env.BUILT_IN_FORGE_API_KEY]
+  const secret = [process.env.JWT_SECRET, process.env.BUILT_IN_FORGE_API_KEY, process.env.DATABASE_URL]
     .find((candidate) => candidate && candidate.length >= 32);
   if (!secret || secret.length < 32) {
     throw new Error("A server-side role-session signing secret is not configured");

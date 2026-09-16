@@ -1,6 +1,8 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
 import { sdk } from "./sdk";
+import { parse as parseCookieHeader } from "cookie";
+import { ROLE_SESSION_COOKIE, readRoleSession } from "./cookies";
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
@@ -22,13 +24,9 @@ export async function createContext(
     user = null;
   }
 
-  // Extract role and department from cookies
-  const cookies = opts.req.headers.cookie || '';
-  const userRoleMatch = cookies.match(/userRole=([^;]+)/);
-  const userDepartmentMatch = cookies.match(/userDepartment=([^;]+)/);
-  
-  const userRole = userRoleMatch ? decodeURIComponent(userRoleMatch[1]) : null;
-  const userDepartment = userDepartmentMatch ? decodeURIComponent(userDepartmentMatch[1]) : null;
+  const roleSession = readRoleSession(parseCookieHeader(opts.req.headers.cookie ?? "")[ROLE_SESSION_COOKIE]);
+  const userRole = roleSession?.role ?? null;
+  const userDepartment = roleSession?.department ?? null;
 
   return {
     req: opts.req,

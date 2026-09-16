@@ -42,13 +42,10 @@ export default function Login() {
         return;
       }
 
-      // Store user role and department in session storage and cookies
+      // Store role metadata for UI navigation only. Authorization is enforced by
+      // the signed HttpOnly cookie issued by the server.
       sessionStorage.setItem("userRole", result.role);
       sessionStorage.setItem("userDepartment", result.department);
-      
-      // Also set cookies for backend access
-      document.cookie = `userRole=${encodeURIComponent(result.role)}; path=/; max-age=${SESSION_TIMEOUT / 1000}`;
-      document.cookie = `userDepartment=${encodeURIComponent(result.department)}; path=/; max-age=${SESSION_TIMEOUT / 1000}`;
 
       // Set up session timeout
       const timeout = setTimeout(() => {
@@ -59,7 +56,7 @@ export default function Login() {
       }, SESSION_TIMEOUT);
 
       // Store timeout ID for cleanup if needed
-      sessionStorage.setItem("sessionTimeoutId", String(timeout));
+      void timeout;
 
       toast.success(`Welcome, ${result.department}!`);
       setLocation("/");

@@ -1,6 +1,6 @@
 import { COOKIE_NAME } from "@shared/const";
 import { students as studentsTable } from "../drizzle/schema";
-import { getSessionCookieOptions } from "./_core/cookies";
+import { createRoleSession, getRoleSessionCookieOptions, getSessionCookieOptions, ROLE_SESSION_COOKIE } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import {
@@ -35,6 +35,28 @@ import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
+const failedPasscodeAttempts = new Map<string, { count: number; resetAt: number }>();
+const PASSCODE_MAX_ATTEMPTS = 10;
+const PASSCODE_WINDOW_MS = 15 * 60 * 1000;
+
+function assertPasscodeRateLimit(key: string) {
+  const now = Date.now();
+  const current = failedPasscodeAttempts.get(key);
+  if (!current || current.resetAt <= now) {
+    failedPasscodeAttempts.set(key, { count: 0, resetAt: now + PASSCODE_WINDOW_MS });
+    return;
+  }
+  if (current.count >= PASSCODE_MAX_ATTEMPTS) {
+    throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Too many login attempts. Try again later." });
+  }
+}
+
+function recordFailedPasscode(key: string) {
+  const current = failedPasscodeAttempts.get(key) ?? { count: 0, resetAt: Date.now() + PASSCODE_WINDOW_MS };
+  current.count += 1;
+  failedPasscodeAttempts.set(key, current);
+}
+
 // Permission check helpers
 function requireSuperAdmin(ctx: any) {
   if (ctx.userRole !== "super_admin") {
@@ -62,21 +84,31 @@ export const appRouter = router({
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      ctx.res.clearCookie(ROLE_SESSION_COOKIE, { ...cookieOptions, maxAge: -1 });
       return {
         success: true,
       } as const;
     }),
     // Backend passcode validation
     loginWithPasscode: publicProcedure
-      .input(z.object({ passcode: z.string().min(1) }))
-      .mutation(async ({ input }) => {
+      .input(z.object({ passcode: z.string().trim().min(1).max(128) }))
+      .mutation(async ({ input, ctx }) => {
+        const attemptKey = ctx.req.ip || "unknown";
+        assertPasscodeRateLimit(attemptKey);
         const credentials = await validateDepartmentPasscode(input.passcode);
         if (!credentials) {
+          recordFailedPasscode(attemptKey);
           throw new TRPCError({
             code: "UNAUTHORIZED",
             message: "Invalid passcode",
           });
         }
+        failedPasscodeAttempts.delete(attemptKey);
+        ctx.res.cookie(
+          ROLE_SESSION_COOKIE,
+          createRoleSession(credentials.role, credentials.department),
+          getRoleSessionCookieOptions(ctx.req),
+        );
         return {
           success: true,
           role: credentials.role,
@@ -110,6 +142,7 @@ export const appRouter = router({
       }),
 
     create: protectedProcedure
+      .use(({ ctx, next }) => { requireSuperAdmin(ctx); return next({ ctx }); })
       .input(z.object({
         studentId: z.string().min(1),
         name: z.string().min(1),
@@ -207,6 +240,7 @@ export const appRouter = router({
       }),
 
     update: protectedProcedure
+      .use(({ ctx, next }) => { requireSuperAdmin(ctx); return next({ ctx }); })
       .input(z.object({
         id: z.number(),
         name: z.string().min(1),
@@ -251,7 +285,8 @@ export const appRouter = router({
       }),
 
     delete: protectedProcedure
-      .input(z.object({ studentId: z.number() }))
+      .use(({ ctx, next }) => { requireSuperAdmin(ctx); return next({ ctx }); })
+      .input(z.object({ studentId: z.number().int().positive() }))
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
@@ -269,6 +304,13 @@ export const appRouter = router({
           await db.delete(sportsChecks).where(eq(sportsChecks.clearanceId, clearance.id));
           await db.delete(classroomChecks).where(eq(classroomChecks.clearanceId, clearance.id));
           await db.delete(dormChecks).where(eq(dormChecks.clearanceId, clearance.id));
+          await db.delete(libraryBooks).where(eq(libraryBooks.clearanceId, clearance.id));
+          const { ictChecks, medicalChecks, registrarChecks, finalClearances, reopenClearances } = await import("../drizzle/schema");
+          await db.delete(ictChecks).where(eq(ictChecks.clearanceId, clearance.id));
+          await db.delete(medicalChecks).where(eq(medicalChecks.clearanceId, clearance.id));
+          await db.delete(registrarChecks).where(eq(registrarChecks.clearanceId, clearance.id));
+          await db.delete(finalClearances).where(eq(finalClearances.clearanceId, clearance.id));
+          await db.delete(reopenClearances).where(eq(reopenClearances.clearanceId, clearance.id));
           await db.delete(clearances).where(eq(clearances.id, clearance.id));
         }
 
@@ -511,6 +553,7 @@ export const appRouter = router({
   // Finance checks
   financeCheck: router({
     add: protectedProcedure
+      .use(({ ctx, next }) => { requireDepartmentAccess(ctx, "finance"); return next({ ctx }); })
       .input(
         z.object({
           clearanceId: z.number(),
@@ -547,6 +590,7 @@ export const appRouter = router({
   // Lab checks
   labCheck: router({
     add: protectedProcedure
+      .use(({ ctx, next }) => { requireDepartmentAccess(ctx, "lab"); return next({ ctx }); })
       .input(
         z.object({
           clearanceId: z.number(),
@@ -585,6 +629,7 @@ export const appRouter = router({
   // Sports checks
   sportsCheck: router({
     add: protectedProcedure
+      .use(({ ctx, next }) => { requireDepartmentAccess(ctx, "sports"); return next({ ctx }); })
       .input(
         z.object({
           clearanceId: z.number(),
@@ -623,6 +668,7 @@ export const appRouter = router({
   // Classroom checks
   classroomCheck: router({
     add: protectedProcedure
+      .use(({ ctx, next }) => { requireDepartmentAccess(ctx, "classroom"); return next({ ctx }); })
       .input(
         z.object({
           clearanceId: z.number(),
@@ -661,6 +707,7 @@ export const appRouter = router({
   // Dorm checks
   dormCheck: router({
     add: protectedProcedure
+      .use(({ ctx, next }) => { requireDepartmentAccess(ctx, "dorm"); return next({ ctx }); })
       .input(
         z.object({
           clearanceId: z.number(),
@@ -698,12 +745,15 @@ export const appRouter = router({
 
   // Admin configuration
   adminConfig: router({
-    get: protectedProcedure.query(async () => {
+    get: protectedProcedure
+      .use(({ ctx, next }) => { requireSuperAdmin(ctx); return next({ ctx }); })
+      .query(async () => {
       const config = await getAdminConfig();
       return config || { enableSports: false, enableDorm: false, enableLab: false, enableClassroom: false, enableFinance: false };
     }),
 
     update: protectedProcedure
+      .use(({ ctx, next }) => { requireSuperAdmin(ctx); return next({ ctx }); })
       .input(
         z.object({
           enableSports: z.boolean().optional(),
@@ -722,6 +772,7 @@ export const appRouter = router({
   // Library book management
   libraryBook: router({
     approveBook: protectedProcedure
+      .use(({ ctx, next }) => { requireDepartmentAccess(ctx, "library"); return next({ ctx }); })
       .input(
         z.object({
           bookId: z.number(),

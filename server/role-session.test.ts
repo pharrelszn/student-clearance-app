@@ -1,0 +1,27 @@
+import { afterEach, describe, expect, it } from "vitest";
+import { createRoleSession, readRoleSession } from "./_core/cookies";
+
+describe("role sessions", () => {
+  it("round-trips a signed role session", () => {
+    process.env.JWT_SECRET = "a".repeat(32);
+    const token = createRoleSession("finance", "Finance");
+    expect(readRoleSession(token)).toMatchObject({ role: "finance", department: "Finance" });
+  });
+
+  it("rejects tampered sessions", () => {
+    process.env.JWT_SECRET = "a".repeat(32);
+    const token = createRoleSession("finance", "Finance");
+    const [payload] = token.split(".");
+    expect(readRoleSession(`${payload}.tampered`)).toBeNull();
+  });
+
+  it("rejects malformed sessions", () => {
+    process.env.JWT_SECRET = "a".repeat(32);
+    expect(readRoleSession("not-a-session")).toBeNull();
+    expect(readRoleSession(undefined)).toBeNull();
+  });
+});
+
+afterEach(() => {
+  delete process.env.JWT_SECRET;
+});

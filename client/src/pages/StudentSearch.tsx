@@ -21,6 +21,7 @@ export default function StudentSearch() {
   const [, setLocation] = useLocation();
   const [editingStudent, setEditingStudent] = useState<any>(null);
   const canBulkUpdate = sessionStorage.getItem("userRole") === "super_admin";
+  const userDepartment = sessionStorage.getItem("userDepartment");
   const { data: results, isLoading, refetch } = trpc.student.search.useQuery(
     {
       query,
@@ -265,6 +266,18 @@ export default function StudentSearch() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                        {userDepartment && !canBulkUpdate && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleSelectStudent(student.id);
+                            }}
+                          >
+                            {student.departments.includes(userDepartment) ? "Edit" : "Add"} {userDepartment} info
+                          </Button>
+                        )}
                         <Button
                           variant="default"
                           size="sm"

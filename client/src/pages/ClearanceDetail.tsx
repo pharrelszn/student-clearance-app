@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CheckCircle2, AlertCircle, Clock, ArrowLeft, FileText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import DepartmentSignOff from "@/components/DepartmentSignOff";
+import DepartmentClearanceEditor from "@/components/DepartmentClearanceEditor";
 import LibraryBooks from "@/components/LibraryBooks";
 
 export default function ClearanceDetail() {
@@ -58,6 +59,14 @@ export default function ClearanceDetail() {
       </div>
     );
   }
+
+  const userRole = sessionStorage.getItem("userRole");
+  const userDepartment = sessionStorage.getItem("userDepartment") as "finance" | "lab" | "sports" | "classroom" | "dorm" | "library" | "ict" | "medical" | "registrar" | null;
+  const departmentRecord = userDepartment === "library"
+    ? clearance.library?.[0]
+    : userDepartment
+      ? (clearance as any)[userDepartment]
+      : null;
 
   const statusIcon = {
     pending: <Clock className="w-6 h-6 text-amber-600" />,
@@ -166,6 +175,17 @@ export default function ClearanceDetail() {
             </div>
           </CardContent>
         </Card>
+
+        {userRole !== "super_admin" && userDepartment && (
+          <div className="mb-8">
+            <DepartmentClearanceEditor
+              clearanceId={clearanceId}
+              department={userDepartment}
+              record={departmentRecord}
+              onSaved={() => void refetch()}
+            />
+          </div>
+        )}
 
         {/* Department Sign-offs */}
         <div>

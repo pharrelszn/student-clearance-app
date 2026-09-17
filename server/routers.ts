@@ -30,8 +30,11 @@ import {
   students,
   departmentSignOffs as deptSignOffs,
   libraryBooks,
+  ictChecks,
+  medicalChecks,
+  registrarChecks,
 } from "../drizzle/schema";
-import { eq, sql, inArray } from "drizzle-orm";
+import { eq, sql, inArray, and } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
@@ -428,6 +431,95 @@ export const appRouter = router({
 
       return results;
     }),
+  }),
+
+  // Department-owned clearance information. Each department can add or edit only its own record.
+  departmentData: router({
+    upsert: protectedProcedure
+      .input(z.object({
+        clearanceId: z.number().int().positive(),
+        department: z.enum(["finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical", "registrar"]),
+        id: z.number().int().positive().optional(),
+        outstandingBalance: z.string().optional(),
+        equipmentName: z.string().optional(),
+        equipmentType: z.string().optional(),
+        equipmentDescription: z.string().optional(),
+        damageAmount: z.string().optional(),
+        description: z.string().optional(),
+        quantity: z.number().int().positive().optional(),
+        itemName: z.string().optional(),
+        title: z.string().optional(),
+        bookNumber: z.string().optional(),
+        isbn: z.string().optional(),
+        author: z.string().optional(),
+        fine: z.string().optional(),
+        notes: z.string().optional(),
+        status: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        requireDepartmentAccess(ctx, input.department);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+        const clearance = await db.select({ id: clearances.id }).from(clearances).where(eq(clearances.id, input.clearanceId)).limit(1);
+        if (clearance.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Clearance not found" });
+
+        const now = new Date();
+        const updateOrInsert = async (table: any, values: Record<string, unknown>) => {
+          if (input.id) {
+            const existing = await db.select({ id: table.id }).from(table).where(and(eq(table.id, input.id), eq(table.clearanceId, input.clearanceId))).limit(1);
+            if (existing.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Department record not found for this clearance" });
+            await db.update(table).set({ ...values, updatedAt: now }).where(and(eq(table.id, input.id), eq(table.clearanceId, input.clearanceId)));
+            return input.id;
+          }
+          const result = await db.insert(table).values({ clearanceId: input.clearanceId, ...values });
+          return (result as any).insertId;
+        };
+
+        let recordId: number;
+        switch (input.department) {
+          case "finance":
+            if (!input.outstandingBalance) throw new TRPCError({ code: "BAD_REQUEST", message: "Outstanding balance is required" });
+            recordId = await updateOrInsert(financeChecks, { outstandingBalance: input.outstandingBalance, description: input.description });
+            break;
+          case "lab":
+            if (!input.equipmentName || !input.damageAmount) throw new TRPCError({ code: "BAD_REQUEST", message: "Equipment name and damage amount are required" });
+            recordId = await updateOrInsert(labChecks, { equipmentName: input.equipmentName, damageAmount: input.damageAmount, description: input.description });
+            break;
+          case "sports":
+            if (!input.equipmentName) throw new TRPCError({ code: "BAD_REQUEST", message: "Equipment name is required" });
+            recordId = await updateOrInsert(sportsChecks, { equipmentName: input.equipmentName, quantity: input.quantity ?? 1, description: input.description });
+            break;
+          case "classroom":
+            if (!input.itemName || !input.damageAmount) throw new TRPCError({ code: "BAD_REQUEST", message: "Item name and damage amount are required" });
+            recordId = await updateOrInsert(classroomChecks, { itemName: input.itemName, damageAmount: input.damageAmount, description: input.description });
+            break;
+          case "dorm":
+            if (!input.itemName || !input.damageAmount) throw new TRPCError({ code: "BAD_REQUEST", message: "Item name and damage amount are required" });
+            recordId = await updateOrInsert(dormChecks, { itemName: input.itemName, damageAmount: input.damageAmount, description: input.description });
+            break;
+          case "library":
+            if (!input.title || !input.bookNumber) throw new TRPCError({ code: "BAD_REQUEST", message: "Book title and number are required" });
+            recordId = await updateOrInsert(libraryBooks, { title: input.title, bookNumber: input.bookNumber, isbn: input.isbn, author: input.author, fine: input.fine, notes: input.notes });
+            break;
+          case "ict":
+            if (!input.equipmentType) throw new TRPCError({ code: "BAD_REQUEST", message: "Equipment type is required" });
+            recordId = await updateOrInsert(ictChecks, { equipmentType: input.equipmentType, equipmentDescription: input.equipmentDescription, damageAmount: input.damageAmount, notes: input.notes, status: input.status });
+            break;
+          case "medical":
+            recordId = await updateOrInsert(medicalChecks, { notes: input.notes, status: input.status ?? "pending" });
+            break;
+          case "registrar":
+            recordId = await updateOrInsert(registrarChecks, { notes: input.notes, status: input.status ?? "pending" });
+            break;
+        }
+
+        await db.update(clearances).set({ updatedAt: now }).where(eq(clearances.id, input.clearanceId));
+        const signOff = await db.select({ id: departmentSignOffs.id }).from(departmentSignOffs).where(and(eq(departmentSignOffs.clearanceId, input.clearanceId), eq(departmentSignOffs.department, input.department))).limit(1);
+        if (signOff.length === 0) {
+          await db.insert(departmentSignOffs).values({ clearanceId: input.clearanceId, department: input.department, status: "pending" });
+        }
+        return { success: true, id: recordId };
+      }),
   }),
 
   // Department sign-offs

@@ -20,6 +20,7 @@ export default function StudentSearch() {
   const [bulkStatus, setBulkStatus] = useState<"pending" | "in_progress" | "completed">("completed");
   const [, setLocation] = useLocation();
   const [editingStudent, setEditingStudent] = useState<any>(null);
+  const canBulkUpdate = sessionStorage.getItem("userRole") === "super_admin";
   const { data: results, isLoading, refetch } = trpc.student.search.useQuery(
     {
       query,
@@ -197,7 +198,7 @@ export default function StudentSearch() {
             </div>
           ) : displayResults.length > 0 ? (
             <div className="space-y-3">
-              {selectedStudentIds.length > 0 && (
+              {canBulkUpdate && selectedStudentIds.length > 0 && (
                 <div className="sticky top-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
                   <p className="text-sm font-medium text-blue-950">
                     {selectedStudentIds.length} student{selectedStudentIds.length === 1 ? "" : "s"} selected
@@ -227,14 +228,16 @@ export default function StudentSearch() {
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex flex-wrap items-center gap-3">
-                          <input
-                            type="checkbox"
-                            aria-label={`Select ${student.name}`}
-                            checked={selectedStudentIds.includes(student.id)}
-                            onChange={() => toggleStudentSelection(student.id)}
-                            onClick={(event) => event.stopPropagation()}
-                            className="h-4 w-4 rounded border-border accent-blue-600"
-                          />
+                          {canBulkUpdate && (
+                            <input
+                              type="checkbox"
+                              aria-label={`Select ${student.name}`}
+                              checked={selectedStudentIds.includes(student.id)}
+                              onChange={() => toggleStudentSelection(student.id)}
+                              onClick={(event) => event.stopPropagation()}
+                              className="h-4 w-4 rounded border-border accent-blue-600"
+                            />
+                          )}
                           <p className="font-semibold text-foreground text-lg">{student.name}</p>
                           <Badge variant="outline" className={getStatusBadge(student.clearanceStatus).className}>
                             {getStatusBadge(student.clearanceStatus).label}

@@ -5,6 +5,19 @@ import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
+async function withDatabaseRetry<T>(operation: () => Promise<T>, attempts = 3): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) await new Promise((resolve) => setTimeout(resolve, 150 * attempt));
+    }
+  }
+  throw lastError;
+}
+
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
@@ -546,11 +559,11 @@ export async function validateDepartmentPasscode(passcode: string) {
 
   const { departmentPasscodes } = await import("../drizzle/schema");
 
-  const result = await db
+  const result = await withDatabaseRetry(() => db
     .select()
     .from(departmentPasscodes)
     .where(eq(departmentPasscodes.passcode, passcode))
-    .limit(1);
+    .limit(1));
 
   if (result.length === 0) {
     return null;

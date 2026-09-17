@@ -100,7 +100,13 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const attemptKey = ctx.req.ip || "unknown";
         assertPasscodeRateLimit(attemptKey);
-        const credentials = await validateDepartmentPasscode(input.passcode);
+        let credentials;
+        try {
+          credentials = await validateDepartmentPasscode(input.passcode);
+        } catch (error) {
+          console.error("[Auth] Department passcode lookup failed:", error);
+          throw new TRPCError({ code: "SERVICE_UNAVAILABLE", message: "Database temporarily unavailable. Please try again." });
+        }
         if (!credentials) {
           recordFailedPasscode(attemptKey);
           throw new TRPCError({

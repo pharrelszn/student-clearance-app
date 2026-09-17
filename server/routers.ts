@@ -31,7 +31,7 @@ import {
   departmentSignOffs as deptSignOffs,
   libraryBooks,
 } from "../drizzle/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
@@ -327,6 +327,48 @@ export const appRouter = router({
 
   // Clearance management
   clearance: router({
+    bulkUpdateStatus: protectedProcedure
+      .use(({ ctx, next }) => { requireSuperAdmin(ctx); return next({ ctx }); })
+      .input(z.object({
+        studentIds: z.array(z.number().int().positive()).min(1).max(100),
+        status: z.enum(["pending", "in_progress", "completed"]),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        const requestedIds = Array.from(new Set(input.studentIds));
+        const existingStudents = await db
+          .select({ id: students.id })
+          .from(students)
+          .where(inArray(students.id, requestedIds));
+        const existingIds = new Set(existingStudents.map((student) => student.id));
+        const missing = requestedIds.filter((studentId) => !existingIds.has(studentId));
+        const now = new Date();
+
+        for (const studentId of Array.from(existingIds)) {
+          const clearance = await getOrCreateClearance(studentId);
+          await db.update(clearances).set({
+            status: input.status,
+            completedAt: input.status === "completed" ? now : null,
+            updatedAt: now,
+          }).where(eq(clearances.id, clearance.id));
+        }
+
+        if (ctx.user) {
+          await logAuditAction({
+            userId: ctx.user.id,
+            userRole: ctx.userRole as string,
+            userDepartment: ctx.userDepartment as string,
+            action: "BULK_UPDATE_CLEARANCE_STATUS",
+            newValue: JSON.stringify({ studentIds: Array.from(existingIds), status: input.status }),
+            notes: `Bulk clearance status update: ${input.status} for ${existingIds.size} students`,
+          });
+        }
+
+        return { updated: existingIds.size, skipped: 0, missing };
+      }),
+
     initiate: protectedProcedure
       .input(z.object({ studentId: z.number() }))
       .mutation(async ({ input, ctx }) => {

@@ -16,6 +16,8 @@ export default function StudentSearch() {
   const [department, setDepartment] = useState("all");
   const [sortBy, setSortBy] = useState<"name" | "clearanceStatus" | "department">("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
+  const [bulkStatus, setBulkStatus] = useState<"pending" | "in_progress" | "completed">("completed");
   const [, setLocation] = useLocation();
   const [editingStudent, setEditingStudent] = useState<any>(null);
   const { data: results, isLoading, refetch } = trpc.student.search.useQuery(
@@ -33,6 +35,17 @@ export default function StudentSearch() {
     },
     onError: (error) => {
       toast.error(error.message || "Failed to initiate clearance");
+    },
+  });
+
+  const bulkStatusMutation = trpc.clearance.bulkUpdateStatus.useMutation({
+    onSuccess: (result) => {
+      toast.success(`Updated ${result.updated} student${result.updated === 1 ? "" : "s"}.`);
+      setSelectedStudentIds([]);
+      void refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to update selected students");
     },
   });
 
@@ -77,6 +90,17 @@ export default function StudentSearch() {
 
   const handleSelectStudent = (studentId: number) => {
     initiateMutation.mutate({ studentId });
+  };
+
+  const toggleStudentSelection = (studentId: number) => {
+    setSelectedStudentIds((current) => current.includes(studentId)
+      ? current.filter((id) => id !== studentId)
+      : [...current, studentId]);
+  };
+
+  const handleBulkUpdate = () => {
+    if (selectedStudentIds.length === 0) return;
+    bulkStatusMutation.mutate({ studentIds: selectedStudentIds, status: bulkStatus });
   };
 
   return (
@@ -173,6 +197,26 @@ export default function StudentSearch() {
             </div>
           ) : displayResults.length > 0 ? (
             <div className="space-y-3">
+              {selectedStudentIds.length > 0 && (
+                <div className="sticky top-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+                  <p className="text-sm font-medium text-blue-950">
+                    {selectedStudentIds.length} student{selectedStudentIds.length === 1 ? "" : "s"} selected
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <select aria-label="New clearance status" value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value as typeof bulkStatus)} className="h-9 rounded-md border border-blue-200 bg-white px-2 text-sm">
+                      <option value="pending">Pending</option>
+                      <option value="in_progress">In progress</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                    <Button type="button" size="sm" onClick={handleBulkUpdate} disabled={bulkStatusMutation.isPending}>
+                      {bulkStatusMutation.isPending ? "Updating…" : "Update status"}
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedStudentIds([])}>
+                      Clear selection
+                    </Button>
+                  </div>
+                </div>
+              )}
               {displayResults.map((student) => (
                 <Card
                   key={student.id}
@@ -183,10 +227,21 @@ export default function StudentSearch() {
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex flex-wrap items-center gap-3">
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${student.name}`}
+                            checked={selectedStudentIds.includes(student.id)}
+                            onChange={() => toggleStudentSelection(student.id)}
+                            onClick={(event) => event.stopPropagation()}
+                            className="h-4 w-4 rounded border-border accent-blue-600"
+                          />
                           <p className="font-semibold text-foreground text-lg">{student.name}</p>
                           <Badge variant="outline" className={getStatusBadge(student.clearanceStatus).className}>
                             {getStatusBadge(student.clearanceStatus).label}
                           </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            Last updated: {student.clearanceUpdatedAt ? new Date(student.clearanceUpdatedAt).toLocaleString() : "Not yet updated"}
+                          </span>
                         </div>
                         <div className="mt-2 space-y-1">
                           <p className="text-sm text-muted-foreground">

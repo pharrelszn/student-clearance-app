@@ -469,6 +469,7 @@ export async function searchStudents({
     .select({
       student: students,
       clearanceStatus: clearances.status,
+      clearanceUpdatedAt: clearances.updatedAt,
       department: departmentSignOffs.department,
     })
     .from(students)
@@ -487,6 +488,7 @@ export async function searchStudents({
     grouped.set(row.student.id, {
       ...row.student,
       clearanceStatus: row.clearanceStatus ?? "pending",
+      clearanceUpdatedAt: row.clearanceUpdatedAt,
       departments: new Set(row.department ? [row.department] : []),
     });
   }

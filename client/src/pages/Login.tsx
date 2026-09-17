@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Shield } from "lucide-react";
+import { Loader2, Shield } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
@@ -110,7 +110,12 @@ export default function Login() {
                 className="w-full bg-black hover:bg-gray-800 text-white transition-smooth"
                 disabled={isLoading}
               >
-                {isLoading ? "Verifying..." : "Access Portal"}
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2" aria-live="polite">
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    Verifying passcode...
+                  </span>
+                ) : "Access Portal"}
               </Button>
 
               <p className="text-xs text-muted-foreground text-center mt-4">

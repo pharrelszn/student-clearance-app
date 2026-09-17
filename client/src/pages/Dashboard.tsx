@@ -16,6 +16,7 @@ export default function Dashboard() {
   const userRole = sessionStorage.getItem("userRole");
   const userDepartment = sessionStorage.getItem("userDepartment");
   const isSuperAdmin = userRole === "super_admin";
+  const displayDepartment = userDepartment || "Department";
 
   if (authLoading || summaryLoading) {
     return (
@@ -74,6 +75,16 @@ export default function Dashboard() {
           <h1 className="text-editorial-heading mb-2 fade-in-up">Clearance Portal</h1>
           <p className="text-editorial-subheading text-muted-foreground fade-in-up" style={{animationDelay: '0.1s'}}>
             {isSuperAdmin ? "Manage student clearance processes across all departments" : `${userDepartment?.toUpperCase()} Department - Manage student clearances`}
+          </p>
+        </div>
+
+        <div className="mb-10 rounded-2xl border border-[#9c2b2b]/20 bg-gradient-to-r from-[#9c2b2b] to-[#c05a4f] px-6 py-5 text-white shadow-lg shadow-[#9c2b2b]/15">
+          <p className="text-sm font-medium uppercase tracking-[0.18em] text-white/75">Welcome back</p>
+          <p className="mt-1 text-2xl font-semibold tracking-tight">
+            {displayDepartment} Department
+          </p>
+          <p className="mt-1 text-sm text-white/80">
+            You are signed in and ready to manage student clearances for your department.
           </p>
         </div>
 

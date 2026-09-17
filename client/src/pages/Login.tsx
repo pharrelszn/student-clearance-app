@@ -45,7 +45,9 @@ export default function Login() {
       // Store role metadata for UI navigation only. Authorization is enforced by
       // the signed HttpOnly cookie issued by the server.
       sessionStorage.setItem("userRole", result.role);
-      sessionStorage.setItem("userDepartment", result.department);
+      // Keep the machine-readable role key in storage. The API accepts values
+      // such as "finance" and "lab"; result.department is a display label.
+      sessionStorage.setItem("userDepartment", result.role);
 
       // Set up session timeout
       const timeout = setTimeout(() => {

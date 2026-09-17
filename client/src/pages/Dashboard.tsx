@@ -16,7 +16,19 @@ export default function Dashboard() {
   const userRole = sessionStorage.getItem("userRole");
   const userDepartment = sessionStorage.getItem("userDepartment");
   const isSuperAdmin = userRole === "super_admin";
-  const displayDepartment = userDepartment || "Department";
+  const departmentLabels: Record<string, string> = {
+    super_admin: "Super Admin",
+    finance: "Finance",
+    lab: "Lab/ICT",
+    sports: "Sports",
+    classroom: "Classroom",
+    dorm: "Dorm/Hostel",
+    library: "Library",
+    ict: "ICT",
+    medical: "Medical",
+    registrar: "Registrar",
+  };
+  const displayDepartment = departmentLabels[userDepartment || ""] || "Department";
 
   if (authLoading || summaryLoading) {
     return (
@@ -74,7 +86,7 @@ export default function Dashboard() {
           </div>
           <h1 className="text-editorial-heading mb-2 fade-in-up">Clearance Portal</h1>
           <p className="text-editorial-subheading text-muted-foreground fade-in-up" style={{animationDelay: '0.1s'}}>
-            {isSuperAdmin ? "Manage student clearance processes across all departments" : `${userDepartment?.toUpperCase()} Department - Manage student clearances`}
+            {isSuperAdmin ? "Manage student clearance processes across all departments" : `${displayDepartment} Department - Manage student clearances`}
           </p>
         </div>
 
@@ -114,7 +126,7 @@ export default function Dashboard() {
         {!isSuperAdmin && (
           <div className="mb-12 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-900">
-              <strong>Department:</strong> {userDepartment?.toUpperCase()}
+              <strong>Department:</strong> {displayDepartment}
             </p>
             <p className="text-xs text-blue-800 mt-2">
               You can search for students and manage clearance information for your department only.

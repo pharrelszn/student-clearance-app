@@ -22,6 +22,17 @@ export default function StudentSearch() {
   const [editingStudent, setEditingStudent] = useState<any>(null);
   const canBulkUpdate = sessionStorage.getItem("userRole") === "super_admin";
   const userDepartment = sessionStorage.getItem("userDepartment");
+  const departmentLabels: Record<string, string> = {
+    finance: "Finance",
+    lab: "Lab/ICT",
+    sports: "Sports",
+    classroom: "Classroom",
+    dorm: "Dorm/Hostel",
+    library: "Library",
+    ict: "ICT",
+    medical: "Medical",
+    registrar: "Registrar",
+  };
   const { data: results, isLoading, refetch } = trpc.student.search.useQuery(
     {
       query,
@@ -275,7 +286,7 @@ export default function StudentSearch() {
                               handleSelectStudent(student.id);
                             }}
                           >
-                            {student.departments.includes(userDepartment) ? "Edit" : "Add"} {userDepartment} info
+                            {student.departments.includes(userDepartment) ? "Edit" : "Add"} {departmentLabels[userDepartment] || userDepartment} info
                           </Button>
                         )}
                         <Button

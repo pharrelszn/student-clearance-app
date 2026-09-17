@@ -72,7 +72,9 @@ function requireSuperAdmin(ctx: any) {
 
 function requireDepartmentAccess(ctx: any, requiredDepartment: string | null | undefined) {
   if (ctx.userRole === "super_admin") return; // Super Admin has access to everything
-  if (!requiredDepartment || ctx.userDepartment !== requiredDepartment) {
+  const normalizedUserDepartment = String(ctx.userDepartment ?? "").toLowerCase().replace("/ict", "");
+  const normalizedRequiredDepartment = String(requiredDepartment ?? "").toLowerCase().replace("/ict", "");
+  if (!normalizedRequiredDepartment || normalizedUserDepartment !== normalizedRequiredDepartment) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: `Access denied. You can only manage ${ctx.userDepartment} department clearances`,
@@ -539,8 +541,8 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
         
-        // Verify the department matches the user's department
-        if (ctx.userRole !== "super_admin" && input.department !== ctx.userDepartment) {
+        // Verify the department matches the user's normalized department alias
+        if (ctx.userRole !== "super_admin" && input.department !== String(ctx.userDepartment ?? "").toLowerCase().replace("/ict", "")) {
           throw new TRPCError({
             code: "FORBIDDEN",
             message: `You can only approve ${ctx.userDepartment} department clearances`,
@@ -630,8 +632,8 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
         
-        // Verify the department matches the user's department
-        if (ctx.userRole !== "super_admin" && input.department !== ctx.userDepartment) {
+        // Verify the department matches the user's normalized department alias
+        if (ctx.userRole !== "super_admin" && input.department !== String(ctx.userDepartment ?? "").toLowerCase().replace("/ict", "")) {
           throw new TRPCError({
             code: "FORBIDDEN",
             message: `You can only flag ${ctx.userDepartment} department clearances`,

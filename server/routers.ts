@@ -178,6 +178,64 @@ export const appRouter = router({
         return { success: true, message: "Student created successfully" };
       }),
 
+    bulkCreate: protectedProcedure
+      .use(({ ctx, next }) => { requireSuperAdmin(ctx); return next({ ctx }); })
+      .input(z.object({
+        rows: z.array(z.object({
+          studentId: z.string().trim().min(1).max(64),
+          name: z.string().trim().min(1).max(255),
+          email: z.string().trim().max(320).optional(),
+          phone: z.string().trim().max(20).optional(),
+          program: z.string().trim().max(255).optional(),
+          yearOfStudy: z.number().int().positive().optional(),
+          graduationYear: z.number().int().min(1900).max(2200).optional(),
+          admissionNumber: z.string().trim().max(64).optional(),
+        })).min(1).max(1000),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        const requestedIds = Array.from(new Set(input.rows.map((row) => row.studentId)));
+        const existing = await db.select({ studentId: students.studentId }).from(students).where(inArray(students.studentId, requestedIds));
+        const existingIds = new Set(existing.map((row) => row.studentId));
+        const seen = new Set<string>();
+        let imported = 0;
+        let skipped = 0;
+        const currentYear = new Date().getFullYear();
+
+        for (const row of input.rows) {
+          if (seen.has(row.studentId) || existingIds.has(row.studentId)) {
+            skipped += 1;
+            continue;
+          }
+          seen.add(row.studentId);
+          await db.insert(students).values({
+            studentId: row.studentId,
+            name: row.name,
+            email: row.email || null,
+            phone: row.phone || null,
+            program: row.program || "Not provided",
+            yearOfStudy: row.yearOfStudy ?? null,
+            graduationYear: row.graduationYear ?? currentYear,
+            admissionNumber: row.admissionNumber || null,
+          });
+          imported += 1;
+        }
+
+        if (ctx.user && imported > 0) {
+          await logAuditAction({
+            userId: ctx.user.id,
+            userRole: ctx.userRole as string,
+            userDepartment: ctx.userDepartment as string,
+            action: "BULK_IMPORT_STUDENTS",
+            newValue: JSON.stringify({ imported, skipped }),
+            notes: `Bulk student import completed: ${imported} imported, ${skipped} skipped`,
+          });
+        }
+        return { imported, skipped };
+      }),
+
     registerWithDepartments: protectedProcedure
       .use(({ ctx, next }) => {
         requireSuperAdmin(ctx);

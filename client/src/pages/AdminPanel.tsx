@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2, Settings } from "lucide-react";
+import StudentListUpload from "@/components/StudentListUpload";
 
 type AdminStep = "config" | "add-students" | "manage-checks";
 
@@ -379,6 +380,7 @@ export default function AdminPanel() {
         {/* STEP 2: Add Students */}
         {step === "add-students" && configSaved && (
           <div className="space-y-6 max-w-2xl">
+            <StudentListUpload />
             <Card className="border-border">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

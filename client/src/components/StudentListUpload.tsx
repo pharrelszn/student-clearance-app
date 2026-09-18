@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { FileUp, UploadCloud } from "lucide-react";
+import * as XLSX from "xlsx";
 
 interface StudentRow {
   studentId: string;
@@ -11,6 +12,10 @@ interface StudentRow {
   email?: string;
   phone?: string;
   program?: string;
+  stream?: string;
+  upi?: string;
+  kcpeScore?: number;
+  gender?: string;
   yearOfStudy?: number;
   graduationYear?: number;
   admissionNumber?: string;
@@ -26,7 +31,11 @@ const aliases: Record<keyof StudentRow, string[]> = {
   name: ["name", "fullname", "studentname", "fullstudentname"],
   email: ["email", "emailaddress", "mail"],
   phone: ["phone", "phonenumber", "mobile", "telephone", "contact"],
-  program: ["program", "course", "form", "class", "department", "stream"],
+  program: ["program", "course", "form", "class", "department"],
+  stream: ["stream", "classstream", "formstream"],
+  upi: ["upi", "uniqueidentifier", "uniquepupilidentifier"],
+  kcpeScore: ["kcpe", "kcpescore", "kcpemarks", "primaryscore"],
+  gender: ["gender", "sex"],
   yearOfStudy: ["yearofstudy", "year", "studyyear", "level", "formyear"],
   graduationYear: ["graduationyear", "gradyear", "yearofgraduation", "completionyear"],
   admissionNumber: ["admissionnumber", "admissionno", "admno", "admission", "indexnumber", "indexno"],
@@ -64,28 +73,31 @@ const toNumber = (value: string | undefined) => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
-const parseFile = (text: string): PreviewRow[] => {
-  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter((line) => line.trim());
-  if (lines.length < 2) return [];
-  const delimiter = (lines[0].match(/\t/g)?.length ?? 0) > (lines[0].match(/,/g)?.length ?? 0) ? "\t" : ",";
-  const headers = parseCsvLine(lines[0], delimiter).map(normalizeHeader);
+const parseRows = (rawRows: string[][]): PreviewRow[] => {
+  const rows = rawRows.filter((row) => row.some((value) => String(value ?? "").trim()));
+  if (rows.length < 2) return [];
+  const headers = rows[0].map((value) => normalizeHeader(String(value ?? "")));
   const columnIndex = (field: keyof StudentRow) => headers.findIndex((header) => aliases[field].includes(header));
   const get = (values: string[], field: keyof StudentRow) => {
     const index = columnIndex(field);
-    return index >= 0 ? values[index]?.trim() : undefined;
+    return index >= 0 ? String(values[index] ?? "").trim() : undefined;
   };
 
-  return lines.slice(1).map((line, index) => {
-    const values = parseCsvLine(line, delimiter);
+  return rows.slice(1).map((values, index) => {
     const graduationYear = toNumber(get(values, "graduationYear"));
     const yearOfStudy = toNumber(get(values, "yearOfStudy"));
+    const kcpeScore = toNumber(get(values, "kcpeScore"));
     const row: PreviewRow = {
       rowNumber: index + 2,
-      studentId: get(values, "studentId") || "",
+      studentId: get(values, "studentId") || get(values, "admissionNumber") || "",
       name: get(values, "name") || "",
       email: get(values, "email") || undefined,
       phone: get(values, "phone") || undefined,
       program: get(values, "program") || undefined,
+      stream: get(values, "stream") || undefined,
+      upi: get(values, "upi") || undefined,
+      kcpeScore,
+      gender: get(values, "gender") || undefined,
       yearOfStudy,
       graduationYear,
       admissionNumber: get(values, "admissionNumber") || undefined,
@@ -95,8 +107,16 @@ const parseFile = (text: string): PreviewRow[] => {
     if (!row.name) row.errors.push("Missing student name");
     if (get(values, "graduationYear") && graduationYear === undefined) row.errors.push("Invalid graduation year");
     if (get(values, "yearOfStudy") && yearOfStudy === undefined) row.errors.push("Invalid year of study");
+    if (get(values, "kcpeScore") && kcpeScore === undefined) row.errors.push("Invalid KCPE score");
     return row;
   });
+};
+
+const parseFile = (text: string): PreviewRow[] => {
+  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter((line) => line.trim());
+  if (lines.length < 2) return [];
+  const delimiter = (lines[0].match(/\t/g)?.length ?? 0) > (lines[0].match(/,/g)?.length ?? 0) ? "\t" : ",";
+  return parseRows(lines.map((line) => parseCsvLine(line, delimiter)));
 };
 
 export default function StudentListUpload({ onImported }: { onImported?: () => void }) {
@@ -121,8 +141,14 @@ export default function StudentListUpload({ onImported }: { onImported?: () => v
   const handleFile = async (file: File) => {
     setIsReading(true);
     try {
-      const text = await file.text();
-      const parsed = parseFile(text);
+      let parsed: PreviewRow[];
+      if (file.name.toLowerCase().endsWith(".xlsx") || file.name.toLowerCase().endsWith(".xls")) {
+        const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: false });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        parsed = parseRows(XLSX.utils.sheet_to_json<string[]>(firstSheet, { header: 1, defval: "", raw: false }));
+      } else {
+        parsed = parseFile(await file.text());
+      }
       setFileName(file.name);
       setRows(parsed);
       if (parsed.length === 0) toast.error("No data rows found. Use a CSV or tab-separated file with a header row.");
@@ -144,7 +170,7 @@ export default function StudentListUpload({ onImported }: { onImported?: () => v
         <p className="text-sm text-muted-foreground">Upload a CSV or tab-separated list. Column names are detected automatically, so use whatever student information your list provides.</p>
       </CardHeader>
       <CardContent className="space-y-4">
-        <input ref={inputRef} type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleFile(file); }} />
+        <input ref={inputRef} type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleFile(file); }} />
         <Button type="button" variant="outline" onClick={() => inputRef.current?.click()} disabled={isReading || importMutation.isPending}>
           <FileUp className="mr-2 h-4 w-4" />{isReading ? "Reading list…" : "Choose student list"}
         </Button>
@@ -165,7 +191,7 @@ export default function StudentListUpload({ onImported }: { onImported?: () => v
             </Button>
           </>
         )}
-        <p className="text-xs text-muted-foreground">Required: a student ID and name column. Other fields are imported when present. Duplicate student IDs are skipped safely.</p>
+        <p className="text-xs text-muted-foreground">Required: a student ID or admission number and a name column. Other fields are imported when present. Duplicate student IDs are skipped safely.</p>
       </CardContent>
     </Card>
   );

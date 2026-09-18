@@ -223,8 +223,8 @@ export default function ClearanceDetail() {
           </div>
         </div>
 
-        {/* Department Details */}
-        <div className="mt-12">
+        {/* Department Details are global and Admin-only. Departmental users see only their scoped editor above. */}
+        {userRole === "super_admin" && <div className="mt-12">
           <h2 className="text-editorial-heading text-2xl mb-6">Department Details</h2>
           <Tabs defaultValue="finance" className="w-full">
             <TabsList className="grid w-full grid-cols-6 border-b border-border">
@@ -391,7 +391,7 @@ export default function ClearanceDetail() {
               <LibraryBooks clearanceId={clearanceId} onBooksUpdate={refetch} />
             </TabsContent>
           </Tabs>
-        </div>
+        </div>}
       </div>
     </div>
   );

@@ -9,13 +9,13 @@ import { CheckCircle2, Clock, AlertCircle } from "lucide-react";
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
-  const { data: summary, isLoading: summaryLoading } = trpc.clearance.getSummary.useQuery();
-  const { data: clearances, isLoading: clearancesLoading } = trpc.clearance.listAll.useQuery();
 
   // Get user role from session storage
   const userRole = sessionStorage.getItem("userRole");
   const userDepartment = sessionStorage.getItem("userDepartment");
   const isSuperAdmin = userRole === "super_admin";
+  const { data: summary, isLoading: summaryLoading } = trpc.clearance.getSummary.useQuery(undefined, { enabled: isSuperAdmin });
+  const { data: clearances, isLoading: clearancesLoading } = trpc.clearance.listAll.useQuery(undefined, { enabled: isSuperAdmin });
   const departmentLabels: Record<string, string> = {
     super_admin: "Super Admin",
     finance: "Finance",
@@ -100,8 +100,8 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        {/* Stats Grid - Admin only because the summary is global */}
+        {isSuperAdmin && <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           {stats.map((stat) => {
             const Icon = stat.icon;
             return (
@@ -120,7 +120,7 @@ export default function Dashboard() {
               </Card>
             );
           })}
-        </div>
+        </div>}
 
         {/* Department Info for Department Users */}
         {!isSuperAdmin && (
@@ -143,13 +143,15 @@ export default function Dashboard() {
           >
             Search Student
           </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => setLocation("/clearances")}
-          >
-            View All Clearances
-          </Button>
+          {isSuperAdmin && (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setLocation("/clearances")}
+            >
+              View All Clearances
+            </Button>
+          )}
           {/* Admin Panel - Only for Super Admin */}
           {isSuperAdmin && (
             <Button
@@ -193,8 +195,8 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        {/* Recent Clearances */}
-        <div>
+        {/* Recent Clearances - Admin only because the list is global */}
+        {isSuperAdmin && <div>
           <h2 className="text-editorial-heading text-2xl mb-6">Recent Clearances</h2>
           {clearancesLoading ? (
             <div className="flex justify-center">
@@ -233,7 +235,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           )}
-        </div>
+        </div>}
       </div>
     </div>
   );

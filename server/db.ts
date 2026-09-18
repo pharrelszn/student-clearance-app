@@ -461,10 +461,12 @@ export async function searchStudents({
   query,
   status,
   department,
+  scopeDepartment,
 }: {
   query: string;
   status?: "pending" | "in_progress" | "completed";
   department?: "finance" | "lab" | "sports" | "classroom" | "dorm" | "library" | "ict" | "medical" | "registrar";
+  scopeDepartment?: string | null;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
@@ -502,14 +504,26 @@ export async function searchStudents({
       ...row.student,
       clearanceStatus: row.clearanceStatus ?? "pending",
       clearanceUpdatedAt: row.clearanceUpdatedAt,
-      departments: new Set(row.department ? [row.department] : []),
+      departments: new Set(row.department && (!scopeDepartment || row.department === scopeDepartment) ? [row.department] : []),
     });
   }
 
-  return Array.from(grouped.values()).map((student) => ({
-    ...student,
-    departments: Array.from(student.departments).sort(),
-  }));
+  return Array.from(grouped.values()).map((student) => scopeDepartment
+    ? {
+        id: student.id,
+        studentId: student.studentId,
+        admissionNumber: student.admissionNumber,
+        name: student.name,
+        program: student.program,
+        graduationYear: student.graduationYear,
+        clearanceStatus: student.clearanceStatus,
+        clearanceUpdatedAt: student.clearanceUpdatedAt,
+        departments: Array.from(student.departments).sort(),
+      }
+    : {
+        ...student,
+        departments: Array.from(student.departments).sort(),
+      });
 }
 
 export async function getClearanceStatusSummary() {

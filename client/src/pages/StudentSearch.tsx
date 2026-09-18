@@ -21,6 +21,7 @@ export default function StudentSearch() {
   const [, setLocation] = useLocation();
   const [editingStudent, setEditingStudent] = useState<any>(null);
   const canBulkUpdate = sessionStorage.getItem("userRole") === "super_admin";
+  const isSuperAdmin = canBulkUpdate;
   const userDepartment = sessionStorage.getItem("userDepartment");
   const departmentLabels: Record<string, string> = {
     finance: "Finance",
@@ -39,7 +40,7 @@ export default function StudentSearch() {
       status: status === "all" ? undefined : status,
       department: department === "all" ? undefined : department as "finance" | "lab" | "sports" | "classroom" | "dorm" | "library" | "ict" | "medical" | "registrar",
     },
-    { enabled: query.length > 0 || status !== "all" || department !== "all" }
+    { enabled: query.trim().length > 0 || (isSuperAdmin && (status !== "all" || department !== "all")) }
   );
 
   const initiateMutation = trpc.clearance.initiate.useMutation({
@@ -82,7 +83,7 @@ export default function StudentSearch() {
     });
   }, [results, sortBy, sortDirection]);
 
-  const hasFilters = query.length > 0 || status !== "all" || department !== "all";
+  const hasFilters = query.trim().length > 0 || (isSuperAdmin && (status !== "all" || department !== "all"));
 
   const clearFilters = () => {
     setQuery("");
@@ -141,7 +142,7 @@ export default function StudentSearch() {
           </div>
         </div>
 
-        <div className="mb-8 max-w-4xl rounded-xl border border-border bg-card p-4">
+{isSuperAdmin && (        <div className="mb-8 max-w-4xl rounded-xl border border-border bg-card p-4">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="font-semibold text-foreground">Filter and sort results</h2>
@@ -192,7 +193,7 @@ export default function StudentSearch() {
               </div>
             </label>
           </div>
-        </div>
+        </div>)}
 
         {/* Results */}
         <div className="max-w-2xl">
@@ -289,7 +290,7 @@ export default function StudentSearch() {
                             {student.departments.includes(userDepartment) ? "Edit" : "Add"} {departmentLabels[userDepartment] || userDepartment} info
                           </Button>
                         )}
-                        <Button
+{isSuperAdmin && (                        <Button
                           variant="default"
                           size="sm"
                           onClick={(e) => {
@@ -300,7 +301,7 @@ export default function StudentSearch() {
                         >
                           <Edit2 className="w-4 h-4 mr-1" />
                           Edit
-                        </Button>
+                        </Button>)}
                         <Button
                           variant="ghost"
                           size="sm"

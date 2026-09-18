@@ -1,6 +1,6 @@
 import { COOKIE_NAME } from "@shared/const";
 import { students as studentsTable } from "../drizzle/schema";
-import { createRoleSession, getRoleSessionCookieOptions, getSessionCookieOptions, ROLE_SESSION_COOKIE } from "./_core/cookies";
+import { createLookupSession, createRoleSession, getLookupSessionCookieOptions, getRoleSessionCookieOptions, getSessionCookieOptions, LOOKUP_SESSION_COOKIE, readLookupSession, ROLE_SESSION_COOKIE } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import {
@@ -37,10 +37,39 @@ import {
 import { eq, sql, inArray, and } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { parse as parseCookieHeader } from "cookie";
 
 const failedPasscodeAttempts = new Map<string, { count: number; resetAt: number }>();
 const PASSCODE_MAX_ATTEMPTS = 10;
 const PASSCODE_WINDOW_MS = 15 * 60 * 1000;
+
+const DEPARTMENT_ALIASES: Record<string, string> = {
+  finance: "finance",
+  "finance department": "finance",
+  lab: "lab",
+  "lab/ict": "lab",
+  "lab/ict department": "lab",
+  sports: "sports",
+  "sports department": "sports",
+  classroom: "classroom",
+  "classroom department": "classroom",
+  dorm: "dorm",
+  "dorm/hostel": "dorm",
+  "dorm/hostel department": "dorm",
+  library: "library",
+  "library department": "library",
+  ict: "ict",
+  "ict department": "ict",
+  medical: "medical",
+  "medical department": "medical",
+  registrar: "registrar",
+  "registrar department": "registrar",
+};
+
+function normalizeDepartmentKey(value: string | null | undefined) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return DEPARTMENT_ALIASES[normalized] ?? normalized;
+}
 
 function assertPasscodeRateLimit(key: string) {
   const now = Date.now();
@@ -72,14 +101,31 @@ function requireSuperAdmin(ctx: any) {
 
 function requireDepartmentAccess(ctx: any, requiredDepartment: string | null | undefined) {
   if (ctx.userRole === "super_admin") return; // Super Admin has access to everything
-  const normalizedUserDepartment = String(ctx.userDepartment ?? "").toLowerCase().replace("/ict", "");
-  const normalizedRequiredDepartment = String(requiredDepartment ?? "").toLowerCase().replace("/ict", "");
+  const normalizedUserDepartment = normalizeDepartmentKey(ctx.userDepartment);
+  const normalizedRequiredDepartment = normalizeDepartmentKey(requiredDepartment);
   if (!normalizedRequiredDepartment || normalizedUserDepartment !== normalizedRequiredDepartment) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: `Access denied. You can only manage ${ctx.userDepartment} department clearances`,
     });
   }
+}
+
+function requireExplicitLookup(ctx: any, studentId: number) {
+  if (ctx.userRole === "super_admin") return;
+  const lookup = readLookupSession(parseCookieHeader(ctx.req.headers.cookie ?? "")[LOOKUP_SESSION_COOKIE]);
+  if (!lookup || lookup.role !== ctx.userRole || normalizeDepartmentKey(lookup.department) !== normalizeDepartmentKey(ctx.userDepartment) || !lookup.studentIds.includes(studentId)) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Search for this student explicitly before opening the record" });
+  }
+}
+
+async function requireExplicitClearanceAccess(ctx: any, clearanceId: number) {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+  const clearance = await db.select({ studentId: clearances.studentId }).from(clearances).where(eq(clearances.id, clearanceId)).limit(1);
+  if (clearance.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Clearance not found" });
+  requireExplicitLookup(ctx, clearance[0].studentId);
+  return db;
 }
 
 export const appRouter = router({
@@ -117,7 +163,7 @@ export const appRouter = router({
         failedPasscodeAttempts.delete(attemptKey);
         ctx.res.cookie(
           ROLE_SESSION_COOKIE,
-          createRoleSession(credentials.role, credentials.department),
+          createRoleSession(credentials.role, credentials.role),
           getRoleSessionCookieOptions(ctx.req),
         );
         return {
@@ -136,12 +182,32 @@ export const appRouter = router({
         status: z.enum(["pending", "in_progress", "completed"]).optional(),
         department: z.enum(["finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical", "registrar"]).optional(),
       }))
-      .query(async ({ input }) => {
-        const results = await searchStudents(input);
+      .query(async ({ input, ctx }) => {
+        const isAdmin = ctx.userRole === "super_admin";
+        const query = input.query.trim();
+        if (!isAdmin && query.length < 3) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Enter at least 3 characters to search for a student" });
+        }
+        if (!isAdmin && (input.status || input.department)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Departmental users may only perform explicit student searches" });
+        }
+        const results = await searchStudents({
+          ...input,
+          query,
+          scopeDepartment: isAdmin ? null : normalizeDepartmentKey(ctx.userDepartment),
+        });
+        if (!isAdmin) {
+          ctx.res.cookie(
+            LOOKUP_SESSION_COOKIE,
+            createLookupSession(ctx.userRole as string, normalizeDepartmentKey(ctx.userDepartment), results.map((student) => student.id)),
+            getLookupSessionCookieOptions(ctx.req),
+          );
+        }
         return results;
       }),
 
     getById: protectedProcedure
+      .use(({ ctx, next }) => { requireSuperAdmin(ctx); return next({ ctx }); })
       .input(z.object({ studentId: z.number() }))
       .query(async ({ input }) => {
         const db = await getDb();
@@ -187,6 +253,10 @@ export const appRouter = router({
           email: z.string().trim().max(320).optional(),
           phone: z.string().trim().max(20).optional(),
           program: z.string().trim().max(255).optional(),
+          stream: z.string().trim().max(64).optional(),
+          upi: z.string().trim().max(64).optional(),
+          kcpeScore: z.number().int().min(0).max(500).optional(),
+          gender: z.string().trim().max(32).optional(),
           yearOfStudy: z.number().int().positive().optional(),
           graduationYear: z.number().int().min(1900).max(2200).optional(),
           admissionNumber: z.string().trim().max(64).optional(),
@@ -216,6 +286,10 @@ export const appRouter = router({
             email: row.email || null,
             phone: row.phone || null,
             program: row.program || "Not provided",
+            stream: row.stream || null,
+            upi: row.upi || null,
+            kcpeScore: row.kcpeScore ?? null,
+            gender: row.gender || null,
             yearOfStudy: row.yearOfStudy ?? null,
             graduationYear: row.graduationYear ?? currentYear,
             admissionNumber: row.admissionNumber || null,
@@ -442,6 +516,7 @@ export const appRouter = router({
       .input(z.object({ studentId: z.number() }))
       .mutation(async ({ input, ctx }) => {
         if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
+        requireExplicitLookup(ctx, input.studentId);
 
         const clearance = await getOrCreateClearance(input.studentId);
         if (!clearance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create clearance" });
@@ -451,15 +526,32 @@ export const appRouter = router({
 
     getDetails: protectedProcedure
       .input(z.object({ clearanceId: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         const details = await getClearanceWithDetails(input.clearanceId);
         if (!details) throw new TRPCError({ code: "NOT_FOUND", message: "Clearance not found" });
-        return details;
+        if (ctx.userRole === "super_admin") return details;
+
+        requireExplicitLookup(ctx, details.studentId);
+        const department = normalizeDepartmentKey(ctx.userDepartment);
+        return {
+          ...details,
+          certificateUrl: null,
+          finance: department === "finance" ? details.finance : null,
+          lab: department === "lab" ? details.lab : null,
+          sports: department === "sports" ? details.sports : null,
+          classroom: department === "classroom" ? details.classroom : null,
+          dorm: department === "dorm" ? details.dorm : null,
+          library: department === "library" ? details.library : [],
+          ict: department === "ict" ? details.ict : null,
+          medical: department === "medical" ? details.medical : null,
+          registrar: department === "registrar" ? details.registrar : null,
+          departmentSignOffs: details.departmentSignOffs.filter((signOff) => signOff.department === department),
+        };
       }),
 
     getStatus: protectedProcedure
       .input(z.object({ clearanceId: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
@@ -469,14 +561,22 @@ export const appRouter = router({
           .where(eq(clearances.id, input.clearanceId))
           .limit(1);
 
-        return result.length > 0 ? result[0] : null;
+        if (result.length === 0) return null;
+        if (ctx.userRole !== "super_admin") requireExplicitLookup(ctx, result[0].studentId);
+        return result[0];
       }),
 
-    getSummary: protectedProcedure.query(async () => {
+    getSummary: protectedProcedure
+      .use(({ ctx, next }) => { requireSuperAdmin(ctx); return next({ ctx }); })
+      .query(async () => {
+      // Summary data is global and is therefore Admin-only.
+      // The client disables this query for departmental users.
       return await getClearanceStatusSummary();
     }),
 
-    listAll: protectedProcedure.query(async () => {
+    listAll: protectedProcedure
+      .use(({ ctx, next }) => { requireSuperAdmin(ctx); return next({ ctx }); })
+      .query(async () => {
       const db = await getDb();
       if (!db) return [];
 
@@ -528,6 +628,8 @@ export const appRouter = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
         const clearance = await db.select({ id: clearances.id }).from(clearances).where(eq(clearances.id, input.clearanceId)).limit(1);
         if (clearance.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Clearance not found" });
+        const clearanceOwner = await db.select({ studentId: clearances.studentId }).from(clearances).where(eq(clearances.id, input.clearanceId)).limit(1);
+        requireExplicitLookup(ctx, clearanceOwner[0].studentId);
 
         const now = new Date();
         const updateOrInsert = async (table: any, values: Record<string, unknown>) => {
@@ -606,7 +708,7 @@ export const appRouter = router({
         if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
         
         // Verify the department matches the user's normalized department alias
-        if (ctx.userRole !== "super_admin" && input.department !== String(ctx.userDepartment ?? "").toLowerCase().replace("/ict", "")) {
+        if (ctx.userRole !== "super_admin" && input.department !== normalizeDepartmentKey(ctx.userDepartment)) {
           throw new TRPCError({
             code: "FORBIDDEN",
             message: `You can only approve ${ctx.userDepartment} department clearances`,
@@ -619,6 +721,8 @@ export const appRouter = router({
         // Get clearance to find student ID for audit logging
         const clearanceData = await db.select().from(clearances).where(eq(clearances.id, input.clearanceId)).limit(1);
         const studentId = clearanceData?.[0]?.studentId;
+        if (studentId === undefined) throw new TRPCError({ code: "NOT_FOUND", message: "Clearance not found" });
+        requireExplicitLookup(ctx, studentId);
 
         const now = new Date();
 
@@ -697,7 +801,7 @@ export const appRouter = router({
         if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
         
         // Verify the department matches the user's normalized department alias
-        if (ctx.userRole !== "super_admin" && input.department !== String(ctx.userDepartment ?? "").toLowerCase().replace("/ict", "")) {
+        if (ctx.userRole !== "super_admin" && input.department !== normalizeDepartmentKey(ctx.userDepartment)) {
           throw new TRPCError({
             code: "FORBIDDEN",
             message: `You can only flag ${ctx.userDepartment} department clearances`,
@@ -710,6 +814,8 @@ export const appRouter = router({
         // Get clearance to find student ID for audit logging
         const clearanceData = await db.select().from(clearances).where(eq(clearances.id, input.clearanceId)).limit(1);
         const studentId = clearanceData?.[0]?.studentId;
+        if (studentId === undefined) throw new TRPCError({ code: "NOT_FOUND", message: "Clearance not found" });
+        requireExplicitLookup(ctx, studentId);
 
         const now = new Date();
 
@@ -743,14 +849,19 @@ export const appRouter = router({
 
     getForClearance: protectedProcedure
       .input(z.object({ clearanceId: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) return [];
 
-        return await db
+        const signOffs = await db
           .select()
           .from(departmentSignOffs)
           .where(eq(departmentSignOffs.clearanceId, input.clearanceId));
+        if (ctx.userRole === "super_admin") return signOffs;
+        const clearance = await db.select({ studentId: clearances.studentId }).from(clearances).where(eq(clearances.id, input.clearanceId)).limit(1);
+        if (clearance.length === 0) return [];
+        requireExplicitLookup(ctx, clearance[0].studentId);
+        return signOffs.filter((signOff) => signOff.department === normalizeDepartmentKey(ctx.userDepartment));
       }),
   }),
 

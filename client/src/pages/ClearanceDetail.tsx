@@ -10,6 +10,28 @@ import DepartmentSignOff from "@/components/DepartmentSignOff";
 import DepartmentClearanceEditor from "@/components/DepartmentClearanceEditor";
 import LibraryBooks from "@/components/LibraryBooks";
 
+type Department = "finance" | "lab" | "sports" | "classroom" | "dorm" | "library" | "ict" | "medical" | "registrar";
+
+const normalizeDepartment = (value: string | null): Department | null => {
+  const aliases: Record<string, Department> = {
+    finance: "finance",
+    "finance department": "finance",
+    lab: "lab",
+    "lab/ict": "lab",
+    "lab/ict department": "lab",
+    sports: "sports",
+    classroom: "classroom",
+    dorm: "dorm",
+    "dorm/hostel": "dorm",
+    "dorm/hostel department": "dorm",
+    library: "library",
+    ict: "ict",
+    medical: "medical",
+    registrar: "registrar",
+  };
+  return value ? aliases[value.trim().toLowerCase()] ?? null : null;
+};
+
 export default function ClearanceDetail() {
   const params = useParams();
   const clearanceId = parseInt(params?.id || "0");
@@ -61,7 +83,7 @@ export default function ClearanceDetail() {
   }
 
   const userRole = sessionStorage.getItem("userRole");
-  const userDepartment = sessionStorage.getItem("userDepartment") as "finance" | "lab" | "sports" | "classroom" | "dorm" | "library" | "ict" | "medical" | "registrar" | null;
+  const userDepartment = normalizeDepartment(sessionStorage.getItem("userDepartment"));
   const departmentRecord = userDepartment === "library"
     ? clearance.library?.[0]
     : userDepartment

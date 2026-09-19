@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, students, clearances, financeChecks, labChecks, sportsChecks, classroomChecks, dormChecks, adminConfigs, departmentSignOffs, libraryBooks, ictChecks, medicalChecks, registrarChecks, auditLogs } from "../drizzle/schema";
-import { like, or, eq, and } from "drizzle-orm";
+import { like, or, eq, and, desc } from "drizzle-orm";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -524,6 +524,27 @@ export async function searchStudents({
         ...student,
         departments: Array.from(student.departments).sort(),
       });
+}
+
+export async function listAllStudents() {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+
+  const rows = await db
+    .select({
+      student: students,
+      clearanceStatus: clearances.status,
+      clearanceUpdatedAt: clearances.updatedAt,
+    })
+    .from(students)
+    .leftJoin(clearances, eq(clearances.studentId, students.id))
+    .orderBy(desc(students.name));
+
+  return rows.map(({ student, clearanceStatus, clearanceUpdatedAt }) => ({
+    ...student,
+    clearanceStatus: clearanceStatus ?? "pending",
+    clearanceUpdatedAt,
+  }));
 }
 
 export async function getClearanceStatusSummary() {

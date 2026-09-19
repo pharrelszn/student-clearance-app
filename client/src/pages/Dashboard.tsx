@@ -15,7 +15,7 @@ export default function Dashboard() {
   const userDepartment = sessionStorage.getItem("userDepartment");
   const isSuperAdmin = userRole === "super_admin";
   const { data: summary, isLoading: summaryLoading } = trpc.clearance.getSummary.useQuery(undefined, { enabled: isSuperAdmin });
-  const { data: clearances, isLoading: clearancesLoading } = trpc.clearance.listAll.useQuery(undefined, { enabled: isSuperAdmin });
+  const { data: students, isLoading: studentsLoading } = trpc.student.listAll.useQuery(undefined, { enabled: isSuperAdmin });
   const departmentLabels: Record<string, string> = {
     super_admin: "Super Admin",
     finance: "Finance",
@@ -195,43 +195,46 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        {/* Recent Clearances - Admin only because the list is global */}
+        {/* All imported students - Admin only */}
         {isSuperAdmin && <div>
-          <h2 className="text-editorial-heading text-2xl mb-6">Recent Clearances</h2>
-          {clearancesLoading ? (
-            <div className="flex justify-center">
-              <Spinner />
-            </div>
-          ) : clearances && clearances.length > 0 ? (
-            <div className="space-y-4">
-              {clearances.slice(0, 5).map((clearance) => (
-                <Card
-                  key={clearance.id}
-                  className="border-border cursor-pointer hover:bg-accent/50 transition-colors"
-                  onClick={() => setLocation(`/clearance/${clearance.id}`)}
-                >
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{clearance.studentId}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Status: <span className="capitalize">{clearance.status}</span>
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">
-                          {clearance.initiatedAt ? new Date(clearance.initiatedAt).toLocaleDateString() : 'N/A'}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+          <h2 className="text-editorial-heading text-2xl mb-6">All Imported Students</h2>
+          {studentsLoading ? (
+            <div className="flex justify-center"><Spinner /></div>
+          ) : students && students.length > 0 ? (
+            <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
+              <table className="w-full min-w-[980px] text-left text-sm">
+                <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3">Name</th>
+                    <th className="px-4 py-3">Admission No.</th>
+                    <th className="px-4 py-3">Stream</th>
+                    <th className="px-4 py-3">UPI</th>
+                    <th className="px-4 py-3">KCPE</th>
+                    <th className="px-4 py-3">Contacts</th>
+                    <th className="px-4 py-3">Gender</th>
+                    <th className="px-4 py-3">Clearance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {students.map((student) => (
+                    <tr key={student.id} className="border-t border-border hover:bg-accent/30">
+                      <td className="px-4 py-3 font-medium text-foreground">{student.name}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{student.admissionNumber || student.studentId}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{student.stream || "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{student.upi || "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{student.kcpeScore ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{student.phone || "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{student.gender || "—"}</td>
+                      <td className="px-4 py-3 capitalize text-muted-foreground">{student.clearanceStatus.replace("_", " ")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
             <Card className="border-border">
               <CardContent className="pt-6 text-center text-muted-foreground">
-                No clearances found
+                No students imported yet. Use Admin Panel → Add Students → Upload student list.
               </CardContent>
             </Card>
           )}

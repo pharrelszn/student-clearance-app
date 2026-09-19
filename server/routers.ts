@@ -5,6 +5,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import {
   searchStudents,
+  listAllStudents,
   getOrCreateClearance,
   getClearanceWithDetails,
   getClearanceStatusSummary,
@@ -176,6 +177,10 @@ export const appRouter = router({
 
   // Student management
   student: router({
+    listAll: protectedProcedure
+      .use(({ ctx, next }) => { requireSuperAdmin(ctx); return next({ ctx }); })
+      .query(async () => listAllStudents()),
+
     search: protectedProcedure
       .input(z.object({
         query: z.string().default(""),

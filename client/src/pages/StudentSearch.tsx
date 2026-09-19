@@ -23,6 +23,10 @@ export default function StudentSearch() {
   const canBulkUpdate = sessionStorage.getItem("userRole") === "super_admin";
   const isSuperAdmin = canBulkUpdate;
   const userDepartment = sessionStorage.getItem("userDepartment");
+  const normalizedQuery = query.trim();
+  const searchReady = isSuperAdmin
+    ? normalizedQuery.length > 0 || status !== "all" || department !== "all"
+    : normalizedQuery.length >= 3;
   const departmentLabels: Record<string, string> = {
     finance: "Finance",
     lab: "Lab/ICT",
@@ -40,7 +44,7 @@ export default function StudentSearch() {
       status: status === "all" ? undefined : status,
       department: department === "all" ? undefined : department as "finance" | "lab" | "sports" | "classroom" | "dorm" | "library" | "ict" | "medical" | "registrar",
     },
-    { enabled: query.trim().length > 0 || (isSuperAdmin && (status !== "all" || department !== "all")) }
+    { enabled: searchReady }
   );
 
   const initiateMutation = trpc.clearance.initiate.useMutation({
@@ -83,7 +87,7 @@ export default function StudentSearch() {
     });
   }, [results, sortBy, sortDirection]);
 
-  const hasFilters = query.trim().length > 0 || (isSuperAdmin && (status !== "all" || department !== "all"));
+  const hasFilters = normalizedQuery.length > 0 || (isSuperAdmin && (status !== "all" || department !== "all"));
 
   const clearFilters = () => {
     setQuery("");
@@ -202,6 +206,14 @@ export default function StudentSearch() {
               <CardContent className="pt-6 text-center py-12">
                 <p className="text-muted-foreground text-lg">
                   Start typing to search for students
+                </p>
+              </CardContent>
+            </Card>
+          ) : !isSuperAdmin && normalizedQuery.length > 0 && normalizedQuery.length < 3 ? (
+            <Card className="border-border">
+              <CardContent className="pt-6 text-center py-12">
+                <p className="text-muted-foreground text-lg">
+                  Enter at least 3 characters from the student&apos;s name or admission number.
                 </p>
               </CardContent>
             </Card>

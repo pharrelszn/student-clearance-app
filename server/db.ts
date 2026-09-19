@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, students, clearances, financeChecks, labChecks, sportsChecks, classroomChecks, dormChecks, adminConfigs, departmentSignOffs, libraryBooks, ictChecks, medicalChecks, registrarChecks, auditLogs } from "../drizzle/schema";
+import { InsertUser, users, students, clearances, financeChecks, labChecks, sportsChecks, classroomChecks, dormChecks, adminConfigs, departmentSignOffs, libraryBooks, ictChecks, medicalChecks, auditLogs } from "../drizzle/schema";
 import { like, or, eq, and, desc } from "drizzle-orm";
 import { ENV } from './_core/env';
 
@@ -185,7 +185,6 @@ export async function deleteStudent(studentId: number) {
     await db.delete(libraryBooks).where(eq(libraryBooks.clearanceId, clearance.id));
     await db.delete(ictChecks).where(eq(ictChecks.clearanceId, clearance.id));
     await db.delete(medicalChecks).where(eq(medicalChecks.clearanceId, clearance.id));
-    await db.delete(registrarChecks).where(eq(registrarChecks.clearanceId, clearance.id));
   }
 
   await db.delete(clearances).where(eq(clearances.studentId, studentId));
@@ -208,7 +207,6 @@ export async function getClearanceWithDetails(clearanceId: number) {
   const libraryData = await db.select().from(libraryBooks).where(eq(libraryBooks.clearanceId, clearanceId));
   const ictData = await db.select().from(ictChecks).where(eq(ictChecks.clearanceId, clearanceId));
   const medicalData = await db.select().from(medicalChecks).where(eq(medicalChecks.clearanceId, clearanceId));
-  const registrarData = await db.select().from(registrarChecks).where(eq(registrarChecks.clearanceId, clearanceId));
   const signOffsData = await db.select().from(departmentSignOffs).where(eq(departmentSignOffs.clearanceId, clearanceId));
 
   return {
@@ -221,7 +219,6 @@ export async function getClearanceWithDetails(clearanceId: number) {
     library: libraryData,
     ict: ictData.length > 0 ? ictData[0] : null,
     medical: medicalData.length > 0 ? medicalData[0] : null,
-    registrar: registrarData.length > 0 ? registrarData[0] : null,
     departmentSignOffs: signOffsData,
   };
 }
@@ -282,7 +279,6 @@ export async function registerStudentWithDepartments(input: {
     library?: { books: Array<{ title: string; bookNumber: string; isbn?: string; author?: string; fine?: string }> };
     ict?: { equipmentType: string; equipmentDescription?: string; damageAmount?: string };
     medical?: { notes?: string };
-    registrar?: { notes?: string };
   };
 }): Promise<{ studentId: number; clearanceId: number }> {
   const db = await getDb();
@@ -436,18 +432,6 @@ export async function registerStudentWithDepartments(input: {
       });
     }
 
-    if (input.departments?.registrar) {
-      await db.insert(departmentSignOffs).values({
-        clearanceId: newClearanceId,
-        department: 'registrar',
-        status: 'pending',
-      });
-      await db.insert(registrarChecks).values({
-        clearanceId: newClearanceId,
-        notes: input.departments.registrar.notes || null,
-      });
-    }
-
     return { studentId: newStudentId, clearanceId: newClearanceId };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -465,7 +449,7 @@ export async function searchStudents({
 }: {
   query: string;
   status?: "pending" | "in_progress" | "completed";
-  department?: "finance" | "lab" | "sports" | "classroom" | "dorm" | "library" | "ict" | "medical" | "registrar";
+  department?: "finance" | "lab" | "sports" | "classroom" | "dorm" | "library" | "ict" | "medical";
   scopeDepartment?: string | null;
 }) {
   const db = await getDb();
@@ -623,7 +607,6 @@ function getDepartmentName(role: string): string {
     finance: "Finance",
     dorm: "Dorm/Hostel",
     medical: "Medical",
-    registrar: "Registrar",
     classroom: "Classroom",
     ict: "ICT",
   };

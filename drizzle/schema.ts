@@ -92,7 +92,7 @@ export type InsertClearance = typeof clearances.$inferInsert;
 export const departmentSignOffs = mysqlTable("departmentSignOffs", {
   id: int("id").autoincrement().primaryKey(),
   clearanceId: int("clearanceId").notNull(),
-  department: mysqlEnum("department", ["finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical", "registrar"]).notNull(),
+  department: mysqlEnum("department", ["finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical"]).notNull(),
   status: mysqlEnum("status", ["pending", "approved", "flagged"]).default("pending").notNull(),
   signedOffBy: int("signedOffBy"),
   signedOffAt: timestamp("signedOffAt"),
@@ -243,21 +243,6 @@ export type MedicalCheck = typeof medicalChecks.$inferSelect;
 export type InsertMedicalCheck = typeof medicalChecks.$inferInsert;
 
 /**
- * Registrar checks table - tracks registrar clearance
- */
-export const registrarChecks = mysqlTable("registrarChecks", {
-  id: int("id").autoincrement().primaryKey(),
-  clearanceId: int("clearanceId").notNull(),
-  status: mysqlEnum("status", ["pending", "cleared", "flagged"]).default("pending").notNull(),
-  notes: text("notes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-
-export type RegistrarCheck = typeof registrarChecks.$inferSelect;
-export type InsertRegistrarCheck = typeof registrarChecks.$inferInsert;
-
-/**
  * Relations
  */
 export const clearancesRelations = relations(clearances, ({ one, many }) => ({
@@ -274,7 +259,6 @@ export const clearancesRelations = relations(clearances, ({ one, many }) => ({
   libraryBooks: many(libraryBooks),
   ictChecks: many(ictChecks),
   medicalChecks: many(medicalChecks),
-  registrarChecks: many(registrarChecks),
 }));
 
 export const departmentSignOffsRelations = relations(departmentSignOffs, ({ one }) => ({
@@ -340,19 +324,12 @@ export const medicalChecksRelations = relations(medicalChecks, ({ one }) => ({
   }),
 }));
 
-export const registrarChecksRelations = relations(registrarChecks, ({ one }) => ({
-  clearance: one(clearances, {
-    fields: [registrarChecks.clearanceId],
-    references: [clearances.id],
-  }),
-}));
-
 /**
  * Department Passcodes table - stores passcodes for each department and Super Admin
  */
 export const departmentPasscodes = mysqlTable("departmentPasscodes", {
   id: int("id").autoincrement().primaryKey(),
-  role: mysqlEnum("role", ["super_admin", "finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical", "registrar"]).notNull().unique(),
+  role: mysqlEnum("role", ["super_admin", "finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical"]).notNull().unique(),
   passcode: varchar("passcode", { length: 255 }).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

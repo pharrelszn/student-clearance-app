@@ -36,13 +36,12 @@ export default function StudentSearch() {
     library: "Library",
     ict: "ICT",
     medical: "Medical",
-    registrar: "Registrar",
   };
   const { data: results, isLoading, refetch } = trpc.student.search.useQuery(
     {
       query,
       status: status === "all" ? undefined : status,
-      department: department === "all" ? undefined : department as "finance" | "lab" | "sports" | "classroom" | "dorm" | "library" | "ict" | "medical" | "registrar",
+      department: department === "all" ? undefined : department as "finance" | "lab" | "sports" | "classroom" | "dorm" | "library" | "ict" | "medical",
     },
     { enabled: searchReady }
   );
@@ -180,7 +179,6 @@ export default function StudentSearch() {
                 <option value="library">Library</option>
                 <option value="ict">ICT</option>
                 <option value="medical">Medical</option>
-                <option value="registrar">Registrar</option>
               </select>
             </label>
             <label className="flex flex-col gap-2 text-sm font-medium text-foreground">

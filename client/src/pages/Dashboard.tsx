@@ -26,7 +26,6 @@ export default function Dashboard() {
     library: "Library",
     ict: "ICT",
     medical: "Medical",
-    registrar: "Registrar",
   };
   const displayDepartment = departmentLabels[userDepartment || ""] || "Department";
 

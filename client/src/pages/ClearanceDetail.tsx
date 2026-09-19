@@ -10,7 +10,7 @@ import DepartmentSignOff from "@/components/DepartmentSignOff";
 import DepartmentClearanceEditor from "@/components/DepartmentClearanceEditor";
 import LibraryBooks from "@/components/LibraryBooks";
 
-type Department = "finance" | "lab" | "sports" | "classroom" | "dorm" | "library" | "ict" | "medical" | "registrar";
+type Department = "finance" | "lab" | "sports" | "classroom" | "dorm" | "library" | "ict" | "medical";
 
 const normalizeDepartment = (value: string | null): Department | null => {
   const aliases: Record<string, Department> = {
@@ -27,7 +27,6 @@ const normalizeDepartment = (value: string | null): Department | null => {
     library: "library",
     ict: "ict",
     medical: "medical",
-    registrar: "registrar",
   };
   return value ? aliases[value.trim().toLowerCase()] ?? null : null;
 };

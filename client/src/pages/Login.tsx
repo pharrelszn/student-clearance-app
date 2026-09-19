@@ -135,7 +135,6 @@ export default function Login() {
                   <p>• Sports</p>
                   <p>• Dorm/Hostel</p>
                   <p>• Medical</p>
-                  <p>• Registrar</p>
                   <p>• Classroom</p>
                 </div>
               </div>

@@ -3,7 +3,7 @@
 ## Completed (Version: 91d35f2b)
 
 ### Phase 1: Database Schema ✅
-- Created `departmentPasscodes` table with roles: super_admin, finance, lab, sports, classroom, dorm, library, ict, medical, registrar
+- Created `departmentPasscodes` table with roles: super_admin, finance, lab, sports, classroom, dorm, library, ict, medical
 - Created `auditLogs` table to track userId, userRole, userDepartment, studentId, action, department, previousValue, newValue, notes, createdAt
 - Created `finalClearances` table to track Super Admin final clearance actions (clearanceId, studentId, clearedBy, clearedAt, certificateUrl)
 - Created `reopenClearances` table to track clearance reopenings with reason
@@ -18,7 +18,6 @@ Sports: sportskabianga2026
 Finance: financekabianga2026
 Dorm: dormkabianga2026
 Medical: medicalkabianga2026
-Registrar: registrarkabianga2026
 ICT: ictkabianga2026
 Classroom: classroomkabianga2026
 ```

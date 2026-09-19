@@ -33,7 +33,6 @@ import {
   libraryBooks,
   ictChecks,
   medicalChecks,
-  registrarChecks,
 } from "../drizzle/schema";
 import { eq, sql, inArray, and } from "drizzle-orm";
 import { z } from "zod";
@@ -63,8 +62,6 @@ const DEPARTMENT_ALIASES: Record<string, string> = {
   "ict department": "ict",
   medical: "medical",
   "medical department": "medical",
-  registrar: "registrar",
-  "registrar department": "registrar",
 };
 
 function normalizeDepartmentKey(value: string | null | undefined) {
@@ -185,7 +182,7 @@ export const appRouter = router({
       .input(z.object({
         query: z.string().default(""),
         status: z.enum(["pending", "in_progress", "completed"]).optional(),
-        department: z.enum(["finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical", "registrar"]).optional(),
+        department: z.enum(["finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical"]).optional(),
       }))
       .query(async ({ input, ctx }) => {
         const isAdmin = ctx.userRole === "super_admin";
@@ -368,9 +365,6 @@ export const appRouter = router({
           medical: z.object({
             notes: z.string().optional(),
           }).optional(),
-          registrar: z.object({
-            notes: z.string().optional(),
-          }).optional(),
         }).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
@@ -457,10 +451,9 @@ export const appRouter = router({
           await db.delete(classroomChecks).where(eq(classroomChecks.clearanceId, clearance.id));
           await db.delete(dormChecks).where(eq(dormChecks.clearanceId, clearance.id));
           await db.delete(libraryBooks).where(eq(libraryBooks.clearanceId, clearance.id));
-          const { ictChecks, medicalChecks, registrarChecks, finalClearances, reopenClearances } = await import("../drizzle/schema");
+          const { ictChecks, medicalChecks, finalClearances, reopenClearances } = await import("../drizzle/schema");
           await db.delete(ictChecks).where(eq(ictChecks.clearanceId, clearance.id));
           await db.delete(medicalChecks).where(eq(medicalChecks.clearanceId, clearance.id));
-          await db.delete(registrarChecks).where(eq(registrarChecks.clearanceId, clearance.id));
           await db.delete(finalClearances).where(eq(finalClearances.clearanceId, clearance.id));
           await db.delete(reopenClearances).where(eq(reopenClearances.clearanceId, clearance.id));
           await db.delete(clearances).where(eq(clearances.id, clearance.id));
@@ -549,7 +542,6 @@ export const appRouter = router({
           library: department === "library" ? details.library : [],
           ict: department === "ict" ? details.ict : null,
           medical: department === "medical" ? details.medical : null,
-          registrar: department === "registrar" ? details.registrar : null,
           departmentSignOffs: details.departmentSignOffs.filter((signOff) => signOff.department === department),
         };
       }),
@@ -609,7 +601,7 @@ export const appRouter = router({
     upsert: protectedProcedure
       .input(z.object({
         clearanceId: z.number().int().positive(),
-        department: z.enum(["finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical", "registrar"]),
+        department: z.enum(["finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical"]),
         id: z.number().int().positive().optional(),
         outstandingBalance: z.string().optional(),
         equipmentName: z.string().optional(),
@@ -681,9 +673,6 @@ export const appRouter = router({
           case "medical":
             recordId = await updateOrInsert(medicalChecks, { notes: input.notes, status: input.status ?? "pending" });
             break;
-          case "registrar":
-            recordId = await updateOrInsert(registrarChecks, { notes: input.notes, status: input.status ?? "pending" });
-            break;
         }
 
         await db.update(clearances).set({ updatedAt: now }).where(eq(clearances.id, input.clearanceId));
@@ -705,7 +694,7 @@ export const appRouter = router({
       .input(
         z.object({
           clearanceId: z.number(),
-          department: z.enum(["finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical", "registrar"]),
+          department: z.enum(["finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical"]),
           notes: z.string().optional(),
         })
       )
@@ -798,7 +787,7 @@ export const appRouter = router({
       .input(
         z.object({
           clearanceId: z.number(),
-          department: z.enum(["finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical", "registrar"]),
+          department: z.enum(["finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical"]),
           notes: z.string(),
         })
       )

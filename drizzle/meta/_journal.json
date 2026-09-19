@@ -64,6 +64,13 @@
       "when": 1789728341241,
       "tag": "0008_superb_wraith",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1789805739195,
+      "tag": "0009_tiny_diamondback",
+      "breakpoints": true
     }
   ]
 }

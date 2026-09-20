@@ -621,6 +621,12 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         requireDepartmentAccess(ctx, input.department);
+        if (input.department === "library" && input.fine?.trim() && !/^\d+(\.\d{1,2})?$/.test(input.fine.trim())) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Fine must contain numbers only, for example 4000 or 4000.50. Put payment or replacement details in Notes.",
+          });
+        }
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
         const clearance = await db.select({ id: clearances.id }).from(clearances).where(eq(clearances.id, input.clearanceId)).limit(1);
@@ -664,7 +670,14 @@ export const appRouter = router({
             break;
           case "library":
             if (!input.title || !input.bookNumber) throw new TRPCError({ code: "BAD_REQUEST", message: "Book title and number are required" });
-            recordId = await updateOrInsert(libraryBooks, { title: input.title, bookNumber: input.bookNumber, isbn: input.isbn, author: input.author, fine: input.fine, notes: input.notes });
+            recordId = await updateOrInsert(libraryBooks, {
+              title: input.title,
+              bookNumber: input.bookNumber,
+              isbn: input.isbn?.trim() || null,
+              author: input.author?.trim() || null,
+              fine: input.fine?.trim() || null,
+              notes: input.notes?.trim() || null,
+            });
             break;
           case "ict":
             if (!input.equipmentType) throw new TRPCError({ code: "BAD_REQUEST", message: "Equipment type is required" });

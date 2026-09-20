@@ -59,7 +59,37 @@ export default function DepartmentClearanceEditor({ clearanceId, department, rec
           {department === "finance" && <>{input("outstandingBalance", "Outstanding balance", "text", true)}{input("description", "Description")}</>}
           {(department === "lab" || department === "sports" || department === "ict") && <>{input("equipmentName", "Equipment name", "text", department !== "ict")}{department === "ict" && input("equipmentType", "Equipment type", "text", true)}{department === "ict" && input("equipmentDescription", "Equipment description")}{department === "sports" && input("quantity", "Quantity", "number")}{department !== "ict" && input("damageAmount", "Damage amount", "text", true)}{input("description", "Description")}{department === "ict" && input("damageAmount", "Damage amount")}{department === "ict" && input("notes", "Notes")}</>}
           {(department === "classroom" || department === "dorm") && <>{input("itemName", "Item name", "text", true)}{input("damageAmount", "Damage amount", "text", true)}{input("description", "Description")}</>}
-          {department === "library" && <>{input("title", "Book title", "text", true)}{input("bookNumber", "Book number", "text", true)}{input("isbn", "ISBN")}{input("author", "Author")}{input("fine", "Fine")}{input("notes", "Notes")}</>}
+          {department === "library" && <>
+            {input("title", "Book title", "text", true)}
+            {input("bookNumber", "Book number", "text", true)}
+            {input("isbn", "ISBN")}
+            {input("author", "Author")}
+            <div>
+              <Label htmlFor="department-fine">Fine / replacement amount (KES)</Label>
+              <Input
+                id="department-fine"
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                value={form.fine ?? ""}
+                onChange={(event) => set("fine", event.target.value)}
+                placeholder="e.g. 4000"
+                className="mt-1"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">Enter numbers only. Put payment or replacement details in Notes.</p>
+            </div>
+            <div>
+              <Label htmlFor="department-notes">Notes</Label>
+              <Textarea
+                id="department-notes"
+                value={form.notes ?? ""}
+                onChange={(event) => set("notes", event.target.value)}
+                placeholder="e.g. KES 4000 is unpaid; replace 3 additional books because pages were intentionally torn."
+                className="mt-1"
+              />
+            </div>
+          </>}
           {department === "medical" && <><div><Label htmlFor="department-status">Status</Label><select id="department-status" value={form.status ?? "pending"} onChange={(event) => set("status", event.target.value)} className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="pending">Pending</option><option value="cleared">Cleared</option><option value="flagged">Flagged</option></select></div><div><Label htmlFor="department-notes">Notes</Label><Textarea id="department-notes" value={form.notes ?? ""} onChange={(event) => set("notes", event.target.value)} className="mt-1" /></div></>}
           {!hasFields && <p className="text-sm text-red-700">This department is not configured for clearance information. Please sign out and sign in again.</p>}
           <Button type="submit" disabled={mutation.isPending || !hasFields}>{mutation.isPending ? <><Spinner className="mr-2 h-4 w-4" />Saving…</> : record ? "Save changes" : "Add information"}</Button>

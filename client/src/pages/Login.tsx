@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Loader2, Shield } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
-const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
+const SESSION_TIMEOUT = 40 * 60 * 1000; // 40 minutes in milliseconds
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -142,7 +142,7 @@ export default function Login() {
               {/* Session Timeout Info */}
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-xs text-blue-900">
-                  <strong>Session Timeout:</strong> Your session will automatically expire after 30 minutes for security.
+                  <strong>Session Timeout:</strong> Your session will automatically expire after 40 minutes for security.
                 </p>
               </div>
             </form>

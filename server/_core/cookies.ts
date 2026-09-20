@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 export const ROLE_SESSION_COOKIE = "clearance_role";
 export const LOOKUP_SESSION_COOKIE = "clearance_lookup";
-const ROLE_SESSION_MAX_AGE_MS = 30 * 60 * 1000;
+const ROLE_SESSION_MAX_AGE_MS = 40 * 60 * 1000;
 const LOOKUP_SESSION_MAX_AGE_MS = 5 * 60 * 1000;
 
 type RoleSession = { role: string; department: string; exp: number };

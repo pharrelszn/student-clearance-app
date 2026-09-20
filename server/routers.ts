@@ -695,6 +695,41 @@ export const appRouter = router({
         }
         return { success: true, id: recordId };
       }),
+
+    delete: protectedProcedure
+      .use(({ ctx, next }) => { requireSuperAdmin(ctx); return next({ ctx }); })
+      .input(z.object({
+        clearanceId: z.number().int().positive(),
+        department: z.enum(["finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical"]),
+        id: z.number().int().positive(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+        const tables: Record<string, any> = {
+          finance: financeChecks,
+          lab: labChecks,
+          sports: sportsChecks,
+          classroom: classroomChecks,
+          dorm: dormChecks,
+          library: libraryBooks,
+          ict: ictChecks,
+          medical: medicalChecks,
+        };
+        const table = tables[input.department];
+        const existing = await db.select({ id: table.id })
+          .from(table)
+          .where(and(eq(table.id, input.id), eq(table.clearanceId, input.clearanceId)))
+          .limit(1);
+        if (existing.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Department record not found for this clearance" });
+
+        await db.delete(table).where(and(eq(table.id, input.id), eq(table.clearanceId, input.clearanceId)));
+        await db.update(departmentSignOffs)
+          .set({ status: "pending", signedOffBy: null, signedOffAt: null, updatedAt: new Date() })
+          .where(and(eq(departmentSignOffs.clearanceId, input.clearanceId), eq(departmentSignOffs.department, input.department)));
+        await db.update(clearances).set({ updatedAt: new Date() }).where(eq(clearances.id, input.clearanceId));
+        return { success: true };
+      }),
   }),
 
   // Department sign-offs

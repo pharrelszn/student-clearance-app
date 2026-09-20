@@ -4,13 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { CheckCircle2, Clock, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useState } from "react";
+import DepartmentClearanceEditor from "@/components/DepartmentClearanceEditor";
 
 interface LibraryBooksProps {
   clearanceId: number;
   onBooksUpdate?: () => void;
+  isAdmin?: boolean;
 }
 
-export default function LibraryBooks({ clearanceId, onBooksUpdate }: LibraryBooksProps) {
+export default function LibraryBooks({ clearanceId, onBooksUpdate, isAdmin = false }: LibraryBooksProps) {
+  const [editingBookId, setEditingBookId] = useState<number | null>(null);
   const { data: books, isLoading, refetch } = trpc.libraryBook.getBooksForClearance.useQuery(
     { clearanceId },
     { enabled: clearanceId > 0 }
@@ -27,6 +31,16 @@ export default function LibraryBooks({ clearanceId, onBooksUpdate }: LibraryBook
     },
   });
 
+  const deleteBookMutation = trpc.departmentData.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Library book deleted");
+      setEditingBookId(null);
+      refetch();
+      onBooksUpdate?.();
+    },
+    onError: (error) => toast.error(`Failed to delete book: ${error.message}`),
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -37,11 +51,14 @@ export default function LibraryBooks({ clearanceId, onBooksUpdate }: LibraryBook
 
   if (!books || books.length === 0) {
     return (
-      <Card className="border-border">
-        <CardContent className="pt-6 text-center py-8">
-          <p className="text-muted-foreground">No library books recorded for this student</p>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        {isAdmin && <DepartmentClearanceEditor clearanceId={clearanceId} department="library" record={null} adminOnly onSaved={() => { refetch(); onBooksUpdate?.(); }} />}
+        <Card className="border-border">
+          <CardContent className="pt-6 text-center py-8">
+            <p className="text-muted-foreground">No library books recorded for this student</p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -66,11 +83,23 @@ export default function LibraryBooks({ clearanceId, onBooksUpdate }: LibraryBook
         </div>
       </div>
 
+      {isAdmin && <DepartmentClearanceEditor clearanceId={clearanceId} department="library" record={null} adminOnly onSaved={() => { refetch(); onBooksUpdate?.(); }} />}
+
       <div className="grid gap-4">
         {books.map((book) => (
-          <Card key={book.id} className="border-border">
-            <CardContent className="pt-6">
-              <div className="space-y-3">
+          <div key={book.id} className="space-y-3">
+            {isAdmin && editingBookId === book.id && (
+              <DepartmentClearanceEditor
+                clearanceId={clearanceId}
+                department="library"
+                record={book}
+                adminOnly
+                onSaved={() => { setEditingBookId(null); refetch(); onBooksUpdate?.(); }}
+              />
+            )}
+            <Card className="border-border">
+              <CardContent className="pt-6">
+                <div className="space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <p className="font-semibold text-foreground">{book.title}</p>
@@ -108,6 +137,26 @@ export default function LibraryBooks({ clearanceId, onBooksUpdate }: LibraryBook
                   </div>
                 )}
 
+                {isAdmin && (
+                  <div className="pt-3 border-t border-border flex gap-2">
+                    <Button type="button" variant="outline" onClick={() => setEditingBookId((current) => current === book.id ? null : book.id)}>
+                      {editingBookId === book.id ? "Cancel edit" : "Edit book"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      disabled={deleteBookMutation.isPending}
+                      onClick={() => {
+                        if (confirm("Delete this library book record? The Library sign-off will be reset.")) {
+                          deleteBookMutation.mutate({ clearanceId, department: "library", id: book.id });
+                        }
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />Delete book
+                    </Button>
+                  </div>
+                )}
+
                 {book.status !== "resolved" && (
                   <div className="pt-3 border-t border-border flex gap-2">
                     <Button
@@ -124,9 +173,10 @@ export default function LibraryBooks({ clearanceId, onBooksUpdate }: LibraryBook
                     </Button>
                   </div>
                 )}
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         ))}
       </div>
     </div>

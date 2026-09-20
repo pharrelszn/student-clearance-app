@@ -222,172 +222,44 @@ export default function ClearanceDetail() {
           </div>
         </div>
 
-        {/* Department Details are global and Admin-only. Departmental users see only their scoped editor above. */}
+        {/* Department Details are global and editable only by Super Admin. */}
         {userRole === "super_admin" && <div className="mt-12">
           <h2 className="text-editorial-heading text-2xl mb-6">Department Details</h2>
           <Tabs defaultValue="finance" className="w-full">
-            <TabsList className="grid w-full grid-cols-6 border-b border-border">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8 border-b border-border">
               <TabsTrigger value="finance">Finance</TabsTrigger>
               <TabsTrigger value="lab">Lab</TabsTrigger>
               <TabsTrigger value="sports">Sports</TabsTrigger>
               <TabsTrigger value="classroom">Classroom</TabsTrigger>
               <TabsTrigger value="dorm">Dorm</TabsTrigger>
               <TabsTrigger value="library">Library</TabsTrigger>
+              <TabsTrigger value="ict">ICT</TabsTrigger>
+              <TabsTrigger value="medical">Medical</TabsTrigger>
             </TabsList>
 
             <TabsContent value="finance" className="mt-6">
-              <Card className="border-border">
-                <CardHeader>
-                  <CardTitle>Finance Department</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {clearance.finance ? (
-                    <div className="space-y-4">
-                      {(clearance.finance ? [clearance.finance] : []).map((check) => (
-                        <div key={check.id} className="border-b border-border pb-4 last:border-0">
-                          <p className="font-semibold text-foreground">
-                            Outstanding Balance: KES {check.outstandingBalance}
-                          </p>
-                          {check.description && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {check.description}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">No finance checks recorded</p>
-                  )}
-                </CardContent>
-              </Card>
+              <DepartmentClearanceEditor clearanceId={clearanceId} department="finance" record={clearance.finance} adminOnly onSaved={() => void refetch()} />
             </TabsContent>
-
             <TabsContent value="lab" className="mt-6">
-              <Card className="border-border">
-                <CardHeader>
-                  <CardTitle>Lab Department</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {clearance.lab ? (
-                    <div className="space-y-4">
-                      {(clearance.lab ? [clearance.lab] : []).map((check) => (
-                        <div key={check.id} className="border-b border-border pb-4 last:border-0">
-                          <p className="font-semibold text-foreground">
-                            {check.equipmentName}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Damage Amount: KES {check.damageAmount}
-                          </p>
-                          {check.description && (
-                            <p className="text-sm text-muted-foreground">
-                              {check.description}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">No lab checks recorded</p>
-                  )}
-                </CardContent>
-              </Card>
+              <DepartmentClearanceEditor clearanceId={clearanceId} department="lab" record={clearance.lab} adminOnly onSaved={() => void refetch()} />
             </TabsContent>
-
             <TabsContent value="sports" className="mt-6">
-              <Card className="border-border">
-                <CardHeader>
-                  <CardTitle>Sports Department</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {clearance.sports ? (
-                    <div className="space-y-4">
-                      {(clearance.sports ? [clearance.sports] : []).map((check) => (
-                        <div key={check.id} className="border-b border-border pb-4 last:border-0">
-                          <p className="font-semibold text-foreground">
-                            {check.equipmentName}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Quantity: {check.quantity} • Status:{" "}
-                            {check.returned ? "Returned" : "Not Returned"}
-                          </p>
-                          {check.description && (
-                            <p className="text-sm text-muted-foreground">
-                              {check.description}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">No sports checks recorded</p>
-                  )}
-                </CardContent>
-              </Card>
+              <DepartmentClearanceEditor clearanceId={clearanceId} department="sports" record={clearance.sports} adminOnly onSaved={() => void refetch()} />
             </TabsContent>
-
             <TabsContent value="classroom" className="mt-6">
-              <Card className="border-border">
-                <CardHeader>
-                  <CardTitle>Classroom Department</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {clearance.classroom ? (
-                    <div className="space-y-4">
-                      {(clearance.classroom ? [clearance.classroom] : []).map((check) => (
-                        <div key={check.id} className="border-b border-border pb-4 last:border-0">
-                          <p className="font-semibold text-foreground">
-                            {check.itemName}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Damage Amount: KES {check.damageAmount}
-                          </p>
-                          {check.description && (
-                            <p className="text-sm text-muted-foreground">
-                              {check.description}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">No classroom checks recorded</p>
-                  )}
-                </CardContent>
-              </Card>
+              <DepartmentClearanceEditor clearanceId={clearanceId} department="classroom" record={clearance.classroom} adminOnly onSaved={() => void refetch()} />
             </TabsContent>
-
             <TabsContent value="dorm" className="mt-6">
-              <Card className="border-border">
-                <CardHeader>
-                  <CardTitle>Dormitory Department</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {clearance.dorm ? (
-                    <div className="space-y-4">
-                      <div className="border-b border-border pb-4">
-                        <p className="font-semibold text-foreground">
-                          {(clearance.dorm as any).itemName}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Damage Amount: KES {(clearance.dorm as any).damageAmount}
-                        </p>
-                        {(clearance.dorm as any).description && (
-                          <p className="text-sm text-muted-foreground">
-                            {(clearance.dorm as any).description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">No dorm checks recorded</p>
-                  )}
-                </CardContent>
-              </Card>
+              <DepartmentClearanceEditor clearanceId={clearanceId} department="dorm" record={clearance.dorm} adminOnly onSaved={() => void refetch()} />
             </TabsContent>
-
             <TabsContent value="library" className="mt-6">
-              <LibraryBooks clearanceId={clearanceId} onBooksUpdate={refetch} />
+              <LibraryBooks clearanceId={clearanceId} isAdmin onBooksUpdate={() => void refetch()} />
+            </TabsContent>
+            <TabsContent value="ict" className="mt-6">
+              <DepartmentClearanceEditor clearanceId={clearanceId} department="ict" record={clearance.ict} adminOnly onSaved={() => void refetch()} />
+            </TabsContent>
+            <TabsContent value="medical" className="mt-6">
+              <DepartmentClearanceEditor clearanceId={clearanceId} department="medical" record={clearance.medical} adminOnly onSaved={() => void refetch()} />
             </TabsContent>
           </Tabs>
         </div>}

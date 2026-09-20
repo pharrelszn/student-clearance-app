@@ -15,6 +15,7 @@ interface DepartmentClearanceEditorProps {
   department: Department;
   record: any;
   onSaved: () => void;
+  adminOnly?: boolean;
 }
 
 const labels: Record<Department, string> = {
@@ -22,7 +23,7 @@ const labels: Record<Department, string> = {
   library: "Library", ict: "ICT", medical: "Medical",
 };
 
-export default function DepartmentClearanceEditor({ clearanceId, department, record, onSaved }: DepartmentClearanceEditorProps) {
+export default function DepartmentClearanceEditor({ clearanceId, department, record, onSaved, adminOnly = false }: DepartmentClearanceEditorProps) {
   const [form, setForm] = useState<any>({});
   const mutation = trpc.departmentData.upsert.useMutation({
     onSuccess: () => {
@@ -30,6 +31,13 @@ export default function DepartmentClearanceEditor({ clearanceId, department, rec
       onSaved();
     },
     onError: (error) => toast.error(error.message || "Failed to save department information"),
+  });
+  const deleteMutation = trpc.departmentData.delete.useMutation({
+    onSuccess: () => {
+      toast.success(`${labels[department]} information deleted`);
+      onSaved();
+    },
+    onError: (error) => toast.error(error.message || "Failed to delete department information"),
   });
 
   useEffect(() => {
@@ -92,7 +100,23 @@ export default function DepartmentClearanceEditor({ clearanceId, department, rec
           </>}
           {department === "medical" && <><div><Label htmlFor="department-status">Status</Label><select id="department-status" value={form.status ?? "pending"} onChange={(event) => set("status", event.target.value)} className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="pending">Pending</option><option value="cleared">Cleared</option><option value="flagged">Flagged</option></select></div><div><Label htmlFor="department-notes">Notes</Label><Textarea id="department-notes" value={form.notes ?? ""} onChange={(event) => set("notes", event.target.value)} className="mt-1" /></div></>}
           {!hasFields && <p className="text-sm text-red-700">This department is not configured for clearance information. Please sign out and sign in again.</p>}
-          <Button type="submit" disabled={mutation.isPending || !hasFields}>{mutation.isPending ? <><Spinner className="mr-2 h-4 w-4" />Saving…</> : record ? "Save changes" : "Add information"}</Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" disabled={mutation.isPending || deleteMutation.isPending || !hasFields}>{mutation.isPending ? <><Spinner className="mr-2 h-4 w-4" />Saving…</> : record ? "Save changes" : "Add information"}</Button>
+            {adminOnly && record?.id && (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={mutation.isPending || deleteMutation.isPending}
+                onClick={() => {
+                  if (confirm(`Delete this ${labels[department]} record? The department sign-off will be reset.`)) {
+                    deleteMutation.mutate({ clearanceId, department, id: record.id });
+                  }
+                }}
+              >
+                {deleteMutation.isPending ? "Deleting…" : "Delete information"}
+              </Button>
+            )}
+          </div>
         </form>
       </CardContent>
     </Card>

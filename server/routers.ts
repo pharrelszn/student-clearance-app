@@ -33,8 +33,9 @@ import {
   libraryBooks,
   ictChecks,
   medicalChecks,
+  departmentPasscodes,
 } from "../drizzle/schema";
-import { eq, sql, inArray, and } from "drizzle-orm";
+import { eq, sql, inArray, and, ne } from "drizzle-orm";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { parse as parseCookieHeader } from "cookie";
@@ -1123,6 +1124,67 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const config = await updateAdminConfig(input);
         return config || { enableSports: false, enableDorm: false, enableLab: false, enableClassroom: false, enableFinance: false };
+      }),
+  }),
+
+  // Department credential management
+  departmentCredentials: router({
+    list: protectedProcedure
+      .use(({ ctx, next }) => { requireSuperAdmin(ctx); return next({ ctx }); })
+      .query(async () => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        return db
+          .select({ role: departmentPasscodes.role, updatedAt: departmentPasscodes.updatedAt })
+          .from(departmentPasscodes)
+          .where(ne(departmentPasscodes.role, "super_admin"))
+          .orderBy(departmentPasscodes.role);
+      }),
+
+    update: protectedProcedure
+      .use(({ ctx, next }) => { requireSuperAdmin(ctx); return next({ ctx }); })
+      .input(z.object({
+        role: z.enum(["finance", "lab", "sports", "classroom", "dorm", "library", "ict", "medical"]),
+        passcode: z.string().trim().min(8, "Passcode must be at least 8 characters").max(128),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        const [target] = await db
+          .select({ role: departmentPasscodes.role })
+          .from(departmentPasscodes)
+          .where(eq(departmentPasscodes.role, input.role))
+          .limit(1);
+        if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "Department credential not found" });
+
+        const [duplicate] = await db
+          .select({ role: departmentPasscodes.role })
+          .from(departmentPasscodes)
+          .where(and(eq(departmentPasscodes.passcode, input.passcode), ne(departmentPasscodes.role, input.role)))
+          .limit(1);
+        if (duplicate) {
+          throw new TRPCError({ code: "CONFLICT", message: "That passcode is already assigned to another department" });
+        }
+
+        const now = new Date();
+        await db
+          .update(departmentPasscodes)
+          .set({ passcode: input.passcode, updatedAt: now })
+          .where(eq(departmentPasscodes.role, input.role));
+
+        await logAuditAction({
+          userId: ctx.user.id,
+          userRole: ctx.userRole,
+          userDepartment: ctx.userDepartment,
+          action: "CHANGE_DEPARTMENT_PASSCODE",
+          department: input.role,
+          notes: `Department passcode changed for ${input.role}`,
+        });
+
+        return { success: true, role: input.role, updatedAt: now } as const;
       }),
   }),
 

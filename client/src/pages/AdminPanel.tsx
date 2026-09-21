@@ -6,15 +6,28 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, Settings } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Settings, KeyRound } from "lucide-react";
 import StudentListUpload from "@/components/StudentListUpload";
 
 type AdminStep = "config" | "add-students" | "manage-checks";
+const departmentCredentialLabels = {
+  finance: "Finance",
+  lab: "Lab",
+  sports: "Sports",
+  classroom: "Classroom",
+  dorm: "Dorm/Hostel",
+  library: "Library",
+  ict: "ICT",
+  medical: "Medical",
+} as const;
+type DepartmentCredentialRole = keyof typeof departmentCredentialLabels;
 
 export default function AdminPanel() {
   const [, setLocation] = useLocation();
   const [step, setStep] = useState<AdminStep>("config");
   const [configSaved, setConfigSaved] = useState(false);
+  const [credentialRole, setCredentialRole] = useState<DepartmentCredentialRole>("finance");
+  const [newPasscode, setNewPasscode] = useState("");
 
   // Configuration state
   const [config, setConfig] = useState({
@@ -69,6 +82,7 @@ export default function AdminPanel() {
 
   // Fetch current config
   const { data: currentConfig } = trpc.adminConfig.get.useQuery();
+  const { data: departmentCredentials, refetch: refetchDepartmentCredentials } = trpc.departmentCredentials.list.useQuery();
 
   useEffect(() => {
     if (currentConfig) {
@@ -90,6 +104,17 @@ export default function AdminPanel() {
     },
     onError: (error) => {
       toast.error(`Failed: ${error.message}`);
+    },
+  });
+
+  const updateDepartmentCredentialMutation = trpc.departmentCredentials.update.useMutation({
+    onSuccess: () => {
+      toast.success(`${departmentCredentialLabels[credentialRole]} passcode updated successfully.`);
+      setNewPasscode("");
+      void refetchDepartmentCredentials();
+    },
+    onError: (error) => {
+      toast.error(`Failed to update passcode: ${error.message}`);
     },
   });
 
@@ -172,6 +197,16 @@ export default function AdminPanel() {
       return;
     }
     updateConfigMutation.mutate(config);
+  };
+
+  const handleChangeDepartmentPasscode = (e: React.FormEvent) => {
+    e.preventDefault();
+    const passcode = newPasscode.trim();
+    if (passcode.length < 8) {
+      toast.error("Passcode must be at least 8 characters");
+      return;
+    }
+    updateDepartmentCredentialMutation.mutate({ role: credentialRole, passcode });
   };
 
   const handleCreateStudent = (e: React.FormEvent) => {
@@ -280,7 +315,8 @@ export default function AdminPanel() {
 
         {/* STEP 1: Configuration */}
         {step === "config" && (
-          <Card className="border-border max-w-2xl">
+          <div className="space-y-6 max-w-2xl">
+          <Card className="border-border">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="w-5 h-5" />
@@ -375,6 +411,61 @@ export default function AdminPanel() {
               </form>
             </CardContent>
           </Card>
+          <Card className="border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <KeyRound className="w-5 h-5" />
+                Department Passcodes
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Change a department passcode. Existing passcodes are never displayed or logged.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleChangeDepartmentPasscode} className="space-y-4">
+                <div>
+                  <label htmlFor="credential-role" className="text-sm font-medium">Department</label>
+                  <select
+                    id="credential-role"
+                    value={credentialRole}
+                    onChange={(e) => setCredentialRole(e.target.value as DepartmentCredentialRole)}
+                    className="mt-2 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    {Object.entries(departmentCredentialLabels).map(([role, label]) => {
+                      const credential = departmentCredentials?.find((entry) => entry.role === role);
+                      return (
+                        <option key={role} value={role}>
+                          {label}{credential ? ` (updated ${new Date(credential.updatedAt).toLocaleDateString()})` : ""}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="new-department-passcode" className="text-sm font-medium">New passcode</label>
+                  <Input
+                    id="new-department-passcode"
+                    type="password"
+                    minLength={8}
+                    maxLength={128}
+                    autoComplete="new-password"
+                    value={newPasscode}
+                    onChange={(e) => setNewPasscode(e.target.value)}
+                    placeholder="Enter a new passcode (8–128 characters)"
+                    className="mt-2"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full bg-black hover:bg-gray-800 text-white"
+                  disabled={updateDepartmentCredentialMutation.isPending}
+                >
+                  {updateDepartmentCredentialMutation.isPending ? "Updating passcode..." : "Change Department Passcode"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+          </div>
         )}
 
         {/* STEP 2: Add Students */}

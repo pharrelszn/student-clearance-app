@@ -229,4 +229,36 @@
     letter-spacing: 1px;
     text-transform: uppercase;
   }
+
+  /* Admin-only glassmorphism actions. The .admin-panel scope keeps this
+     treatment isolated from department, login, and dashboard controls. */
+  .admin-panel [data-slot="button"] {
+    border: 1px solid rgb(255 255 255 / 0.58);
+    background: linear-gradient(135deg, rgb(15 23 42 / 0.92), rgb(30 64 175 / 0.82), rgb(88 28 135 / 0.78));
+    color: #f8fafc;
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.62),
+      0 10px 26px rgb(15 23 42 / 0.18);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: 9999px;
+    transition: transform 180ms ease-out, background 180ms ease-out, box-shadow 180ms ease-out;
+  }
+
+  .admin-panel [data-slot="button"]:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgb(30 41 59 / 0.96), rgb(37 99 235 / 0.9), rgb(126 34 206 / 0.86));
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.76),
+      0 14px 32px rgb(15 23 42 / 0.26);
+    transform: translateY(-1px);
+  }
+
+  .admin-panel [data-slot="button"]:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  .admin-panel [data-slot="button"]:focus-visible {
+    outline: 2px solid rgb(255 255 255 / 0.9);
+    outline-offset: 3px;
+  }
 }

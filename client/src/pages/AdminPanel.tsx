@@ -294,7 +294,7 @@ export default function AdminPanel() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="admin-panel min-h-screen bg-background">
       <div className="container py-12 md:py-16">
         <button
           onClick={() => setLocation("/")}

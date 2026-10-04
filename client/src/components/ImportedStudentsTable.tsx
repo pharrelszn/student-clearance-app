@@ -2,6 +2,7 @@ import React, { type ReactNode } from "react";
 
 type ImportedStudent = {
   id: number;
+  studentId: string;
   name: string;
   admissionNumber: string | null;
   stream: string | null;
@@ -76,7 +77,7 @@ export default function ImportedStudentsTable({
                 {students.map((student) => (
                   <tr key={student.id}>
                     <td className="admin-imported-students__name">{student.name}</td>
-                    <td>{student.admissionNumber || "—"}</td>
+                    <td>{student.admissionNumber || student.studentId || "—"}</td>
                     <td>{student.stream || "—"}</td>
                     <td>{student.upi || "—"}</td>
                     <td>{student.kcpeScore ?? "—"}</td>

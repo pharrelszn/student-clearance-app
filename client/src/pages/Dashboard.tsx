@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import ImportedStudentsTable from "@/components/ImportedStudentsTable";
 import { useLocation } from "wouter";
 import { CheckCircle2, Clock, AlertCircle } from "lucide-react";
 
@@ -195,49 +196,13 @@ export default function Dashboard() {
         </div>
 
         {/* All imported students - Admin only */}
-        {isSuperAdmin && <div>
-          <h2 className="text-editorial-heading text-2xl mb-6">All Imported Students</h2>
-          {studentsLoading ? (
-            <div className="flex justify-center"><Spinner /></div>
-          ) : students && students.length > 0 ? (
-            <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-              <table className="w-full min-w-[980px] text-left text-sm">
-                <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-3">Name</th>
-                    <th className="px-4 py-3">Admission No.</th>
-                    <th className="px-4 py-3">Stream</th>
-                    <th className="px-4 py-3">UPI</th>
-                    <th className="px-4 py-3">KCPE</th>
-                    <th className="px-4 py-3">Contacts</th>
-                    <th className="px-4 py-3">Gender</th>
-                    <th className="px-4 py-3">Clearance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {students.map((student) => (
-                    <tr key={student.id} className="border-t border-border hover:bg-accent/30">
-                      <td className="px-4 py-3 font-medium text-foreground">{student.name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{student.admissionNumber || student.studentId}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{student.stream || "—"}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{student.upi || "—"}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{student.kcpeScore ?? "—"}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{student.phone || "—"}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{student.gender || "—"}</td>
-                      <td className="px-4 py-3 capitalize text-muted-foreground">{student.clearanceStatus.replace("_", " ")}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <Card className="border-border">
-              <CardContent className="pt-6 text-center text-muted-foreground">
-                No students imported yet. Use Admin Panel → Add Students → Upload student list.
-              </CardContent>
-            </Card>
-          )}
-        </div>}
+        {isSuperAdmin && (
+          <ImportedStudentsTable
+            students={students ?? []}
+            isLoading={studentsLoading}
+            emptyState="No students imported yet. Use Admin Panel → Add Students → Upload student list."
+          />
+        )}
       </div>
     </div>
   );

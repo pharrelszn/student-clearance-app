@@ -10,6 +10,7 @@ describe("ImportedStudentsTable", () => {
         students: [
           {
             id: 1,
+            studentId: "STU-001",
             name: "Amina Test Student",
             admissionNumber: "ADM-001",
             stream: "A",

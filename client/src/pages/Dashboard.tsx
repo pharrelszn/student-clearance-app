@@ -63,7 +63,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="liquid-glass-page min-h-screen">
+    <div className="min-h-screen bg-background">
       {/* Glass Header with Settings */}
       <div className="sticky top-0 z-50 glass-header">
         <div className="container flex items-center justify-between py-4">
@@ -71,7 +71,7 @@ export default function Dashboard() {
           <Button
             variant="outline"
             onClick={() => setLocation("/settings")}
-            className="liquid-glass-control"
+            className="border-border hover:bg-white/50 transition-all"
           >
             ⚙️ Settings
           </Button>

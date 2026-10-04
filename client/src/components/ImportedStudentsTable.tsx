@@ -38,6 +38,14 @@ export default function ImportedStudentsTable({
 }: ImportedStudentsTableProps) {
   return (
     <section className="admin-imported-students" aria-labelledby="admin-imported-students-title">
+      <svg className="admin-liquid-filter" aria-hidden="true" focusable="false">
+        <defs>
+          <filter id="liquid-glass" x="-10%" y="-10%" width="120%" height="120%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.012 0.02" numOctaves="2" seed="7" result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="7" xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+        </defs>
+      </svg>
       <div className="admin-imported-students__heading">
         <div>
           <p className="admin-imported-students__eyebrow">Admin directory</p>
@@ -45,7 +53,7 @@ export default function ImportedStudentsTable({
             All Imported Students
           </h2>
         </div>
-        <span className="admin-imported-students__count">
+        <span className="admin-imported-students__count liquid-glass-control">
           {isLoading ? "Loading…" : `${students.length} ${students.length === 1 ? "student" : "students"}`}
         </span>
       </div>

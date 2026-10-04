@@ -262,12 +262,74 @@
     outline-offset: 3px;
   }
 
-  /* Admin-only glassmorphism imported-students table. */
+  /* Admin-only Apple-style Liquid Glass surface. Tune these values first. */
+  .liquid-glass-page {
+    --liquid-blur: 20px; /* Increase for a softer frosted lens. */
+    --liquid-surface-opacity: 0.35; /* Main white gradient opacity. */
+    --liquid-tint-opacity: 0.35; /* Amber badge tint opacity. */
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: #e8dfd1;
+  }
+
+  .liquid-glass-page::before,
+  .liquid-glass-page::after {
+    position: fixed;
+    z-index: -2;
+    border-radius: 9999px;
+    content: "";
+    filter: blur(72px);
+    pointer-events: none;
+  }
+
+  .liquid-glass-page::before {
+    top: -12rem;
+    left: -8rem;
+    width: 34rem;
+    height: 34rem;
+    background: rgb(239 178 145 / 0.72);
+    box-shadow: 58rem 8rem 0 4rem rgb(172 192 153 / 0.56), 20rem 48rem 0 6rem rgb(229 155 92 / 0.4);
+  }
+
+  .liquid-glass-page::after {
+    right: -12rem;
+    bottom: -14rem;
+    width: 38rem;
+    height: 38rem;
+    background: rgb(151 201 196 / 0.54);
+  }
+
+  .liquid-glass-page > * {
+    position: relative;
+  }
+
+  .liquid-glass-control {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgb(255 255 255 / 0.45) !important;
+    border-radius: 9999px !important;
+    background: linear-gradient(135deg, rgb(255 255 255 / 0.35), rgb(255 255 255 / 0.12)) !important;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7), inset 0 -1px 0 rgb(255 255 255 / 0.2), inset 0 0 20px rgb(255 255 255 / 0.15), 0 10px 40px rgb(0 0 0 / 0.12) !important;
+    color: #172033 !important;
+    -webkit-backdrop-filter: url("#liquid-glass") blur(var(--liquid-blur)) saturate(180%) brightness(1.05);
+    backdrop-filter: url("#liquid-glass") blur(var(--liquid-blur)) saturate(180%) brightness(1.05);
+    transition: transform 180ms ease-out, background 180ms ease-out, box-shadow 180ms ease-out;
+  }
+
+  .liquid-glass-control:hover {
+    background: linear-gradient(135deg, rgb(255 255 255 / 0.5), rgb(255 255 255 / 0.2)) !important;
+    transform: translateY(-2px);
+  }
+
+  .liquid-glass-control:focus-visible {
+    outline: 2px solid rgb(23 32 51 / 0.8);
+    outline-offset: 3px;
+  }
+
   .admin-imported-students {
-    --admin-glass-bg: rgb(255 255 255 / 0.12);
-    --admin-glass-border: rgb(255 255 255 / 0.25);
-    --admin-glass-text: #1f2937;
-    --admin-glass-muted: #4b5563;
+    --admin-glass-text: #172033;
+    --admin-glass-muted: #3f4b5c;
     color: var(--admin-glass-text);
   }
 
@@ -308,19 +370,19 @@
   .admin-imported-students__glass {
     position: relative;
     overflow: hidden;
-    border: 1px solid var(--admin-glass-border);
-    border-radius: 20px;
-    background: var(--admin-glass-bg);
-    box-shadow: 0 8px 32px rgb(0 0 0 / 0.25);
-    -webkit-backdrop-filter: blur(16px) saturate(160%);
-    backdrop-filter: blur(16px) saturate(160%);
+    border: 1px solid rgb(255 255 255 / 0.45);
+    border-radius: 32px;
+    background: linear-gradient(135deg, rgb(255 255 255 / 0.35), rgb(255 255 255 / 0.12));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7), inset 0 -1px 0 rgb(255 255 255 / 0.2), inset 0 0 20px rgb(255 255 255 / 0.15), 0 10px 40px rgb(0 0 0 / 0.12);
+    -webkit-backdrop-filter: blur(var(--liquid-blur)) saturate(180%) brightness(1.05);
+    backdrop-filter: blur(var(--liquid-blur)) saturate(180%) brightness(1.05);
   }
 
   .admin-imported-students__glass::before {
     position: absolute;
     inset: 0;
     z-index: 0;
-    background: linear-gradient(135deg, rgb(255 255 255 / 0.22), rgb(255 255 255 / 0.04) 35%, transparent 62%);
+    background: linear-gradient(135deg, rgb(255 255 255 / 0.28), rgb(255 255 255 / 0.05) 35%, transparent 62%);
     content: "";
     pointer-events: none;
   }
@@ -342,7 +404,8 @@
 
   .admin-imported-students__table th {
     padding: 1rem 1.25rem;
-    border-bottom: 1px solid rgb(255 255 255 / 0.25);
+    border-bottom: 1px solid rgb(255 255 255 / 0.35);
+    background: rgb(255 255 255 / 0.28);
     color: var(--admin-glass-muted);
     font-size: 0.72rem;
     font-weight: 700;
@@ -353,7 +416,7 @@
 
   .admin-imported-students__table td {
     padding: 1rem 1.25rem;
-    border-bottom: 1px solid rgb(75 85 99 / 0.16);
+    border-bottom: 1px solid rgb(255 255 255 / 0.35);
     color: var(--admin-glass-text);
     font-size: 0.9rem;
     vertical-align: middle;
@@ -369,7 +432,7 @@
 
   .admin-imported-students__table tbody tr:hover {
     background: rgb(255 255 255 / 0.18);
-    transform: translateY(-1px);
+    transform: none;
   }
 
   .admin-imported-students__name {
@@ -382,6 +445,8 @@
     border: 1px solid transparent;
     border-radius: 9999px;
     padding: 0.32rem 0.65rem;
+    -webkit-backdrop-filter: url("#liquid-glass") blur(12px) saturate(180%);
+    backdrop-filter: url("#liquid-glass") blur(12px) saturate(180%);
     font-size: 0.72rem;
     font-weight: 700;
     line-height: 1;
@@ -389,20 +454,23 @@
   }
 
   .admin-imported-students__badge--pending {
-    border-color: rgb(180 83 9 / 0.38);
-    background: rgb(254 243 199 / 0.76);
+    border-color: rgb(255 255 255 / 0.55);
+    background: rgb(255 190 60 / var(--liquid-tint-opacity));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7), inset 0 0 12px rgb(255 255 255 / 0.18);
     color: #92400e;
   }
 
   .admin-imported-students__badge--in_progress {
-    border-color: rgb(29 78 216 / 0.38);
-    background: rgb(219 234 254 / 0.78);
+    border-color: rgb(255 255 255 / 0.55);
+    background: rgb(128 186 255 / 0.3);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7), inset 0 0 12px rgb(255 255 255 / 0.18);
     color: #1e40af;
   }
 
   .admin-imported-students__badge--completed {
-    border-color: rgb(21 128 61 / 0.38);
-    background: rgb(220 252 231 / 0.8);
+    border-color: rgb(255 255 255 / 0.55);
+    background: rgb(112 205 151 / 0.32);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7), inset 0 0 12px rgb(255 255 255 / 0.18);
     color: #166534;
   }
 
@@ -424,8 +492,9 @@
   }
 
   @supports not ((-webkit-backdrop-filter: blur(16px)) or (backdrop-filter: blur(16px))) {
+    .liquid-glass-control,
     .admin-imported-students__glass {
-      background: rgb(255 255 255 / 0.92);
+      background: rgb(255 255 255 / 0.85) !important;
     }
   }
 
@@ -437,13 +506,19 @@
     }
 
     .admin-imported-students__glass {
-      border-radius: 16px;
+      border-radius: 28px;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .liquid-glass-control,
     .admin-imported-students__table tbody tr {
       transition: none;
+    }
+
+    .liquid-glass-control:hover,
+    .admin-imported-students__table tbody tr:hover {
+      transform: none;
     }
   }
 }

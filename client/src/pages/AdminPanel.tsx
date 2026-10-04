@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2, Settings, KeyRound } from "lucide-react";
 import StudentListUpload from "@/components/StudentListUpload";
+import ImportedStudentsTable from "@/components/ImportedStudentsTable";
 
 type AdminStep = "config" | "add-students" | "manage-checks";
 const departmentCredentialLabels = {
@@ -83,6 +84,11 @@ export default function AdminPanel() {
   // Fetch current config
   const { data: currentConfig } = trpc.adminConfig.get.useQuery();
   const { data: departmentCredentials, refetch: refetchDepartmentCredentials } = trpc.departmentCredentials.list.useQuery();
+  const {
+    data: importedStudents = [],
+    isLoading: importedStudentsLoading,
+    refetch: refetchImportedStudents,
+  } = trpc.student.listAll.useQuery();
 
   useEffect(() => {
     if (currentConfig) {
@@ -122,6 +128,7 @@ export default function AdminPanel() {
     onSuccess: () => {
       toast.success("Student created successfully!");
       setStudentForm({ studentId: "", name: "", program: "", graduationYear: new Date().getFullYear() });
+      void refetchImportedStudents();
     },
     onError: (error) => {
       toast.error(`Failed: ${error.message}`);
@@ -132,6 +139,7 @@ export default function AdminPanel() {
     onSuccess: () => {
       toast.success("Student deleted!");
       setDeleteStudentId("");
+      void refetchImportedStudents();
     },
     onError: (error) => {
       toast.error(`Failed: ${error.message}`);
@@ -470,8 +478,12 @@ export default function AdminPanel() {
 
         {/* STEP 2: Add Students */}
         {step === "add-students" && configSaved && (
-          <div className="space-y-6 max-w-2xl">
-            <StudentListUpload />
+          <div className="space-y-6">
+            <StudentListUpload onImported={() => void refetchImportedStudents()} />
+            <ImportedStudentsTable
+              students={importedStudents}
+              isLoading={importedStudentsLoading}
+            />
             <Card className="border-border">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
